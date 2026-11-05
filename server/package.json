@@ -4,9 +4,12 @@
   "private": true,
   "type": "module",
   "description": "Servidor Boleia (Express + Socket.IO)",
+  "engines": {
+    "node": ">=22.9"
+  },
   "scripts": {
-    "start": "node --env-file=.env src/index.js",
-    "test": "node --env-file=.env --test \"test/*.test.js\""
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "test": "node --env-file-if-exists=.env --test \"test/*.test.js\""
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Polyline } from '../map';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getQuote } from '../api';
 import { useRideChat } from '../chat';
@@ -395,7 +395,7 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
           icon="◎"
           label="A minha posição"
           onPress={() => mapRef.current?.animateToRegion({ ...toRN(pos), latitudeDelta: 0.02, longitudeDelta: 0.02 }, 400)}
-          style={[styles.floating, { top: insets.top + 10, right: 16, left: undefined }]}
+          style={[styles.floatingRight, { top: insets.top + 10 }]}
         />
       )}
       {active && (
@@ -791,7 +791,12 @@ function SearchingPulse({ category }: { category: Category }) {
   const [v] = useState(() => new Animated.Value(0));
   useEffect(() => {
     const loop = Animated.loop(
-      Animated.timing(v, { toValue: 1, duration: 1400, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(v, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: Platform.OS !== 'web',
+      }),
     );
     loop.start();
     return () => loop.stop();
@@ -812,6 +817,7 @@ function SearchingPulse({ category }: { category: Category }) {
 
 const styles = StyleSheet.create({
   floating: { position: 'absolute', left: 16 },
+  floatingRight: { position: 'absolute', right: 16 },
   mapTools: { position: 'absolute', right: 16, gap: 10 },
   where: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, borderRadius: 18, backgroundColor: theme.card, paddingHorizontal: 10, borderWidth: 1, borderColor: theme.line },
   whereIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' },

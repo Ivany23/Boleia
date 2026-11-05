@@ -13,6 +13,9 @@ No Windows, basta dar duplo clique em `iniciar-servidor.bat` e depois em `inicia
 
 Mais detalhes em [COMO-USAR.md](COMO-USAR.md) (guia) e [CONTRACT.md](CONTRACT.md) (API e eventos).
 
+## Publicar
+Servidor no **Render** (`render.yaml`) e app web na **Vercel** (`app/vercel.json`). Passo a passo em [DEPLOY.md](DEPLOY.md).
+
 ## Testes
 ```bash
 cd server && npm test

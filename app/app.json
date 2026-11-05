@@ -34,7 +34,14 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Boleia",
+      "shortName": "Boleia",
+      "description": "A sua boleia em Maputo e Matola. Preço justo, sem surpresas.",
+      "themeColor": "#0A7A4B",
+      "backgroundColor": "#F4F7F5"
     }
   }
 }

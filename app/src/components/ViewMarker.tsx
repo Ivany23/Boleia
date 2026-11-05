@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Marker } from 'react-native-maps';
+import { Marker } from '../map';
 import type { LatLng } from '../types';
 import { toRN } from '../utils';
 

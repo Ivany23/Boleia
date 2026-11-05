@@ -1,0 +1,21 @@
+# Render Blueprint: servidor Boleia (Express + Socket.IO)
+# No Render: New > Blueprint > escolher este repositório. Depois preencher as chaves da Google.
+services:
+  - type: web
+    name: boleia-server
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22.12.0"
+      - key: GOOGLE_ROUTES_API_KEY
+        sync: false
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
+      # Opcionais (preços): FUEL_GASOLINA_MZN, FUEL_GASOLEO_MZN, FUEL_FONTE, PLATFORM_FEE, ROUTES_TRAFFIC

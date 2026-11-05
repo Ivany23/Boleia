@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Marker } from 'react-native-maps';
+import { Marker } from '../map';
 import { useSmoothPoint } from '../motion';
 import type { Category, LatLng } from '../types';
 import { toRN } from '../utils';

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tap } from '../haptics';
 import { shadow, theme } from '../theme';
@@ -64,7 +64,7 @@ export function Sheet({
       toValue: 1,
       duration: 280,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
     }).start();
   }, [v]);
   const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });

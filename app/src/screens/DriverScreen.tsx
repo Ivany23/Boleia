@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Modal, StyleSheet, Switch, Text, View } from 'react-native';
-import MapView, { Polyline } from 'react-native-maps';
+import MapView, { Polyline } from '../map';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPricing } from '../api';
 import { useRideChat } from '../chat';
@@ -367,7 +367,7 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
           icon="◎"
           label="A minha posição"
           onPress={() => mapRef.current?.animateToRegion({ ...toRN(posRef.current), latitudeDelta: 0.02, longitudeDelta: 0.02 }, 400)}
-          style={[styles.back, { top: insets.top + 10, left: undefined, right: 16 }]}
+          style={[styles.backRight, { top: insets.top + 10 }]}
         />
       )}
       {live && (
@@ -593,6 +593,7 @@ function driverTitle(ride: Ride) {
 
 const styles = StyleSheet.create({
   back: { position: 'absolute', left: 16 },
+  backRight: { position: 'absolute', right: 16 },
   mapTools: { position: 'absolute', right: 16, gap: 10 },
   navBtn: { minHeight: 40, paddingHorizontal: 14, borderWidth: 1.5, borderColor: theme.primary },
   note: { flexDirection: 'row', gap: 8, backgroundColor: theme.accentSoft, borderRadius: 12, padding: 10 },
