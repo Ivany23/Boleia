@@ -1,0 +1,19 @@
+{
+  "name": "boleia-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Servidor Boleia (Express + Socket.IO)",
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "test": "node --env-file=.env --test \"test/*.test.js\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

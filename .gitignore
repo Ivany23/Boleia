@@ -1,0 +1,19 @@
+# Dependências
+node_modules/
+
+# Segredos: as chaves da Google ficam SÓ no server/.env (nunca no GitHub)
+.env
+.env.*
+!.env.example
+
+# Expo / build
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Ferramentas locais
+.claude/
+.vscode/
+.DS_Store
+npm-debug.*

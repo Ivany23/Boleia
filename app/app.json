@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Boleia",
+    "slug": "boleia",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "primaryColor": "#0A7A4B",
+    "backgroundColor": "#F4F7F5",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "A Boleia usa a sua localização para encontrar motoristas perto de si e mostrar o percurso.",
+          "locationWhenInUsePermission": "A Boleia usa a sua localização para encontrar motoristas perto de si e mostrar o percurso."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "A Boleia usa a sua localização para encontrar motoristas perto de si e mostrar o percurso."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A7A4B",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
