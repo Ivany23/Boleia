@@ -80,8 +80,6 @@ export type RideOffer = {
 };
 export type AckResult = { ok: true; ride: Ride } | { ok: false; error: string };
 
-export type ChatRole = 'passenger' | 'driver';
-export type ChatMessage = { id: string; rideId: string; from: ChatRole; text: string; at: number };
 
 export type PricingInfo = {
   fuel: { gasolina: number; gasoleo: number; fonte: string };

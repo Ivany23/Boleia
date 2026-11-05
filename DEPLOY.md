@@ -29,7 +29,7 @@ Notas:
 > Se mudar o endereço do servidor, altere a variável e faça **Redeploy**: o endereço fica gravado na app no momento do build.
 
 ### A versão web
-- O mapa usa OpenStreetMap (Leaflet), porque o mapa nativo só existe no telemóvel. Tudo o resto é igual: preços, chat, cancelamento e avaliações.
+- O mapa usa OpenStreetMap (Leaflet), porque o mapa nativo só existe no telemóvel. Tudo o resto é igual: preços, cancelamento e avaliações.
 - Sem inclinação 3D na web; os carros continuam a deslizar e a rodar.
 - O browser pede autorização de localização (só funciona em `https`, que a Vercel já dá).
 

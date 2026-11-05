@@ -28,7 +28,7 @@ Erros: `{ "error": "mensagem em português" }`.
 
 ## Socket.IO
 
-Mesma porta. Eventos cliente para servidor: `passenger:hello`, `driver:online`, `driver:location`, `driver:offline`, `ride:request`, `ride:cancel`, `ride:accept`, `ride:decline`, `ride:arrived`, `ride:start`, `ride:complete`, `ride:rate`, `chat:send`, `chat:history`, `chat:typing`. Servidor para cliente: `drivers:nearby`, `ride:offer`, `ride:update`, `ride:driver_location`, `chat:message`, `chat:typing`. Detalhes no contrato.
+Mesma porta. Eventos cliente para servidor: `passenger:hello`, `driver:online`, `driver:location`, `driver:offline`, `ride:request`, `ride:cancel`, `ride:accept`, `ride:decline`, `ride:arrived`, `ride:start`, `ride:complete`, `ride:rate`. Servidor para cliente: `drivers:nearby`, `ride:offer`, `ride:update`, `ride:driver_location`. Detalhes no contrato.
 
 ## Estrutura
 
@@ -37,5 +37,5 @@ Mesma porta. Eventos cliente para servidor: `passenger:hello`, `driver:online`, 
 - `src/google.js`: Places, Routes (com trânsito e recuo automático), descodificador de polyline, cache de 5 min
 - `src/pricing.js`: motor de preços (combustível ARENE, horários de Maputo, procura, comissão)
 - `src/quotes.js`: cotações com preço garantido
-- `src/rides.js`: estado em memória, atribuição, chat e avaliações
+- `src/rides.js`: estado em memória, atribuição e avaliações
 - `src/geo.js`: distância Haversine

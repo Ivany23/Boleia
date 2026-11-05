@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { haversine } from './geo.js';
 import { CATEGORIES, PAYMENTS, demandMultiplier } from './pricing.js';
 
@@ -7,9 +6,6 @@ const TERMINAL = ['completed', 'cancelled', 'no_drivers'];
 const MAX_PICKUP_M = 10000;
 const NEARBY_M = 5000;
 const DEMAND_RADIUS_M = 5000;
-const CHAT_MAX_MESSAGES = 200;
-const CHAT_MAX_LEN = 500;
-const CHAT_RATE = { max: 8, windowMs: 10000 };
 const ENDED_TTL_MS = 30 * 60 * 1000;
 const RATING_PRIOR = 5; // avaliações "virtuais" iniciais, para uma nota não cair a pique
 
@@ -30,7 +26,7 @@ const publicDriver = (d) => ({
 });
 
 /**
- * Estado em memória (motoristas, passageiros, viagens, conversas) e atribuição.
+ * Estado em memória (motoristas, passageiros, viagens) e atribuição.
  * quotes: { quote(origin, destination), lookup(quoteId, origin, destination) }
  */
 export function createRideService({
@@ -44,10 +40,8 @@ export function createRideService({
   const passengers = new Map(); // socketId -> { name, location }
   const rides = new Map(); // rideId -> Ride
   const meta = new Map(); // rideId -> { tried:Set, timer, offeredTo }
-  const chats = new Map(); // rideId -> Message[]
   const ended = new Map(); // rideId -> ms em que terminou
   const rated = new Set(); // rideIds já avaliados
-  const chatRate = new Map(); // socketId -> timestamps
   let seq = 0;
 
   const say = (msg) => log(`[boleia] ${msg}`);
@@ -61,10 +55,7 @@ export function createRideService({
   function setStatus(ride, status) {
     ride.status = status;
     say(`viagem ${ride.id} -> ${status}`);
-    if (TERMINAL.includes(status)) {
-      ended.set(ride.id, nowMs());
-      chats.delete(ride.id);
-    }
+    if (TERMINAL.includes(status)) ended.set(ride.id, nowMs());
     emitRide(ride);
   }
 
@@ -155,7 +146,6 @@ export function createRideService({
       const ride = rides.get(d.rideId);
       if (ride && ACTIVE.includes(ride.status)) {
         delete ride.driver;
-        chats.delete(ride.id); // a conversa era com o motorista anterior
         meta.set(ride.id, { tried: new Set([id]), timer: null, offeredTo: null });
         setStatus(ride, 'searching');
         offerNext(ride);
@@ -240,49 +230,6 @@ export function createRideService({
     });
     return ack;
   }
-
-  // -------------------------------------------------------------------------
-  // Chat passageiro <-> motorista
-  // -------------------------------------------------------------------------
-
-  /** Papel do socket numa viagem activa (com motorista), ou null. */
-  function chatRole(socketId, ride) {
-    if (!ride || !ACTIVE.includes(ride.status) || !ride.driver) return null;
-    if (ride.passengerId === socketId) return 'passenger';
-    if (ride.driver.id === socketId) return 'driver';
-    return null;
-  }
-
-  function allowChat(socketId) {
-    const t = nowMs();
-    const list = (chatRate.get(socketId) ?? []).filter((x) => t - x < CHAT_RATE.windowMs);
-    if (list.length >= CHAT_RATE.max) {
-      chatRate.set(socketId, list);
-      return false;
-    }
-    list.push(t);
-    chatRate.set(socketId, list);
-    return true;
-  }
-
-  function sendChat(socket, p) {
-    const ride = p && typeof p.rideId === 'string' ? rides.get(p.rideId) : null;
-    const from = chatRole(socket.id, ride);
-    if (!from) return { ok: false, error: 'A conversa só está disponível durante a viagem.' };
-    const text = typeof p.text === 'string' ? p.text.trim().slice(0, CHAT_MAX_LEN) : '';
-    if (!text) return { ok: false, error: 'Mensagem vazia.' };
-    if (!allowChat(socket.id)) return { ok: false, error: 'Está a enviar mensagens muito depressa.' };
-    const message = { id: randomUUID(), rideId: ride.id, from, text, at: Date.now() };
-    const list = chats.get(ride.id) ?? [];
-    list.push(message);
-    if (list.length > CHAT_MAX_MESSAGES) list.splice(0, list.length - CHAT_MAX_MESSAGES);
-    chats.set(ride.id, list);
-    io.to(ride.passengerId).emit('chat:message', message);
-    io.to(ride.driver.id).emit('chat:message', message);
-    return { ok: true, message };
-  }
-
-  // -------------------------------------------------------------------------
 
   function attach(socket) {
     const on = (ev, fn) =>
@@ -432,25 +379,8 @@ export function createRideService({
       return { ok: true };
     });
 
-    withAck('chat:send', (p) => sendChat(socket, p));
-
-    withAck('chat:history', (p) => {
-      const ride = p && typeof p.rideId === 'string' ? rides.get(p.rideId) : null;
-      if (!chatRole(socket.id, ride)) return { ok: false, error: 'Conversa indisponível.' };
-      return { ok: true, messages: chats.get(ride.id) ?? [] };
-    });
-
-    on('chat:typing', (p) => {
-      const ride = p && typeof p.rideId === 'string' ? rides.get(p.rideId) : null;
-      const from = chatRole(socket.id, ride);
-      if (!from) return;
-      const to = from === 'passenger' ? ride.driver.id : ride.passengerId;
-      io.to(to).emit('chat:typing', { rideId: ride.id, from });
-    });
-
     socket.on('disconnect', () => {
       try {
-        chatRate.delete(socket.id);
         removeDriver(socket.id, 'desligou');
         passengers.delete(socket.id);
         const r = activeRideOfPassenger(socket.id);
@@ -492,7 +422,6 @@ export function createRideService({
         ended.delete(id);
         rides.delete(id);
         rated.delete(id);
-        chats.delete(id);
       }
     }
   }

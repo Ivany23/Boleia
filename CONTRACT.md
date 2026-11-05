@@ -89,9 +89,6 @@ Cliente → servidor:
 | `ride:request` (campos extra) | `quoteId?: string`, `note?: string` (máx. 140) | preço garantido; nota que o motorista vê na oferta |
 | `ride:cancel` (campo extra) | `reason?: string` (máx. 80) | a `Ride` cancelada traz `cancelledBy: 'passenger' \| 'driver'` e `cancelReason` |
 | `ride:rate` | `{ rideId, stars: 1..5 }` | passageiro, viagem concluída, uma vez; ack `{ ok }` |
-| `chat:send` | `{ rideId, text }` (máx. 500, 8 por 10 s) | passageiro/motorista da viagem activa; ack `{ ok, message }` |
-| `chat:history` | `{ rideId }` | ack `{ ok, messages }` |
-| `chat:typing` | `{ rideId }` | reencaminhado ao outro lado |
 
 Servidor → cliente:
 | Evento | Payload | Para |
@@ -100,10 +97,8 @@ Servidor → cliente:
 | `ride:offer` | `{ ride: Ride, expiresInSeconds: 15, pickupDistanceMeters: number }` | motorista escolhido |
 | `ride:update` | `Ride` | passageiro e motorista da viagem |
 | `ride:driver_location` | `LatLng` | passageiro da viagem |
-| `chat:message` | `{ id, rideId, from: 'passenger' \| 'driver', text, at }` | passageiro e motorista |
-| `chat:typing` | `{ rideId, from }` | o outro lado da conversa |
 
-A conversa só existe com a viagem em `accepted`/`arrived`/`in_progress` e é apagada quando termina. Viagens terminadas saem da memória após 30 min.
+Não há conversa entre passageiro e motorista. A avaliação (`ride:rate`) é opcional. Viagens terminadas saem da memória após 30 min.
 
 ### Atribuição de viagens
 1. O servidor calcula a cotação (mesma lógica de `/api/quote`), cria a `Ride` com status `searching` e devolve-a no ack.

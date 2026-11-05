@@ -83,8 +83,8 @@ Todos os preços se ajustam sozinhos. `ROUTES_TRAFFIC=0` desliga o trânsito em 
 - **Cancelar:** passageiro e motorista escolhem um motivo, e o outro lado vê quem cancelou e porquê. Se o motorista cancelar, o passageiro tem o botão "Pedir outro motorista".
 - **Navegar (motorista):** abre o Google Maps até à recolha ou ao destino.
 
-## Conversa entre passageiro e motorista
-Depois de o motorista aceitar, os dois têm o botão 💬. Inclui respostas rápidas ("Estou à espera no local", "Há muito trânsito…"), o aviso "a escrever…" e um contador de mensagens por ler. A conversa fecha quando a viagem termina.
+## Avaliação (opcional)
+No fim da viagem, a app sugere avaliar o motorista com 1 a 5 estrelas. É opcional: o passageiro pode tocar em "Agora não". Não há conversa entre passageiro e motorista.
 
 ## Ainda não incluído (próximas fases)
 - Pagamento M-Pesa / e-Mola integrado (por agora paga-se ao motorista)

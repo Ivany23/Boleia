@@ -16,9 +16,7 @@ import {
 import MapView, { Polyline } from '../map';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getQuote } from '../api';
-import { useRideChat } from '../chat';
 import { CancelDialog } from '../components/CancelDialog';
-import { ChatPanel } from '../components/ChatPanel';
 import {
   Avatar,
   Button,
@@ -29,7 +27,6 @@ import {
   Pin,
   PriceTags,
   ProgressBar,
-  RoundButton,
   Sheet,
   Stars,
   common,
@@ -84,23 +81,16 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
   const [requestError, setRequestError] = useState('');
   const [driverLoc, setDriverLoc] = useState<LatLng | null>(null);
   const [rating, setRating] = useState(0);
-  const [chatOpen, setChatOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [follow, setFollow] = useState(false);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const quoteId = useRef(0);
 
-  const chatRideId = ride && LIVE.includes(ride.status) && ride.driver ? ride.id : null;
-  const chat = useRideChat(chatRideId, 'passenger', chatOpen);
-
   const setRideBoth = (r: Ride | null) => {
     rideRef.current = r;
     setRide(r);
   };
-
-  // Fecha a conversa quando a viagem deixa de estar activa
-  if (!chatRideId && chatOpen) setChatOpen(false);
 
   // Position + initial pickup address
   useEffect(() => {
@@ -550,14 +540,11 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
       {ride && active && (
         <Sheet
           summary={
-            <View style={[common.row, { gap: 12, paddingBottom: 4 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[common.h2, { color: theme.primary }]} numberOfLines={1}>{statusTitle(ride, driverLoc)}</Text>
-                <Text style={common.muted} numberOfLines={1}>
-                  {ride.driver ? `${ride.driver.name} · ${ride.driver.plate}` : ''}
-                </Text>
-              </View>
-              <RoundButton icon="💬" label="Conversar com o motorista" badge={chat.unread} onPress={() => setChatOpen(true)} />
+            <View style={{ paddingBottom: 4 }}>
+              <Text style={[common.h2, { color: theme.primary }]} numberOfLines={1}>{statusTitle(ride, driverLoc)}</Text>
+              <Text style={common.muted} numberOfLines={1}>
+                {ride.driver ? `${ride.driver.name} · ${ride.driver.plate}` : ''}
+              </Text>
             </View>
           }
         >
@@ -583,7 +570,6 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
                   <Text style={styles.plateText}>{ride.driver.plate}</Text>
                 </View>
               </View>
-              <RoundButton icon="💬" label="Conversar com o motorista" badge={chat.unread} onPress={() => setChatOpen(true)} />
             </View>
           ) : null}
           <View style={{ gap: 4 }}>
@@ -612,11 +598,18 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
             {PAYMENTS.find((p) => p.id === ride.payment)?.label}
           </Text>
           {ride.fare && <FareDetails fare={ride.fare} />}
-          <Text style={[common.body, { textAlign: 'center', fontWeight: '700' }]}>
-            Como foi a viagem com {ride.driver?.name?.split(' ')[0] ?? 'o motorista'}?
-          </Text>
-          <Stars value={rating} onChange={setRating} />
-          <Button title={rating ? 'Enviar avaliação' : 'Fechar'} onPress={finish} />
+          <View style={styles.rateBox}>
+            <Text style={[common.body, { textAlign: 'center', fontWeight: '700' }]}>
+              Quer avaliar {ride.driver?.name?.split(' ')[0] ?? 'o motorista'}?
+            </Text>
+            <Text style={[common.muted, { textAlign: 'center' }]}>É opcional. Ajuda a manter bons motoristas na Boleia.</Text>
+            <Stars value={rating} onChange={setRating} />
+          </View>
+          {rating ? (
+            <Button title="Enviar avaliação" onPress={finish} />
+          ) : (
+            <Button title="Agora não" variant="ghost" onPress={finish} />
+          )}
         </Sheet>
       )}
 
@@ -691,20 +684,6 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
       />
 
       <NoteDialog visible={noteOpen} value={note} onClose={() => setNoteOpen(false)} onSave={setNote} />
-
-      {chatOpen && chatRideId && ride?.driver && (
-        <ChatPanel
-          role="passenger"
-          otherName={ride.driver.name}
-          otherDetail={`${ride.driver.car} · ${ride.driver.plate}`}
-          otherEmoji={ride.driver.category === 'moto' ? '🏍️' : '🚗'}
-          messages={chat.messages}
-          typing={chat.typing}
-          send={chat.send}
-          sendTyping={chat.sendTyping}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
     </View>
   );
 }
@@ -838,6 +817,7 @@ const styles = StyleSheet.create({
   payText: { fontSize: 14, fontWeight: '800', color: theme.ink },
   payNote: { fontSize: 10, color: theme.muted, textAlign: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center' },
+  rateBox: { backgroundColor: theme.accentSoft, borderRadius: 16, padding: 12, gap: 4 },
   driverCard: { backgroundColor: theme.bg, borderRadius: 16, padding: 12 },
   plate: {
     alignSelf: 'flex-start',

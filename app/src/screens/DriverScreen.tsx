@@ -4,9 +4,7 @@ import { Linking, Modal, StyleSheet, Switch, Text, View } from 'react-native';
 import MapView, { Polyline } from '../map';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPricing } from '../api';
-import { useRideChat } from '../chat';
 import { CancelDialog } from '../components/CancelDialog';
-import { ChatPanel } from '../components/ChatPanel';
 import { Logo } from '../components/Logo';
 import {
   Avatar,
@@ -16,7 +14,6 @@ import {
   MapButton,
   Pin,
   PriceTags,
-  RoundButton,
   Sheet,
   common,
 } from '../components/ui';
@@ -66,23 +63,16 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
   const [trips, setTrips] = useState(0);
   const [notice, setNotice] = useState('');
   const [pricing, setPricing] = useState<PricingInfo | null>(null);
-  const [chatOpen, setChatOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [follow, setFollow] = useState(true);
   const countedRef = useRef<string | null>(null);
   const me = useSmoothPoint(pos);
   const camRef = useRef<{ p: LatLng; heading: number } | null>(null);
 
-  const chatRideId = ride && LIVE.includes(ride.status) ? ride.id : null;
-  const chat = useRideChat(chatRideId, 'driver', chatOpen);
-
   const setRideBoth = (r: Ride | null) => {
     rideRef.current = r;
     setRide(r);
   };
-
-  // Fecha a conversa quando a viagem deixa de estar activa
-  if (!chatRideId && chatOpen) setChatOpen(false);
 
   // Tarifa em vigor e preço do combustível (actualiza a cada 5 min)
   useEffect(() => {
@@ -435,14 +425,11 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
       {live && ride && (
         <Sheet
           summary={
-            <View style={[common.row, { gap: 12, paddingBottom: 4 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[common.h2, { color: theme.primary }]} numberOfLines={1}>{driverTitle(ride)}</Text>
-                <Text style={common.muted} numberOfLines={1}>
-                  {ride.passengerName} · recebe {money(earningsOf(ride))}
-                </Text>
-              </View>
-              <RoundButton icon="💬" label="Conversar com o passageiro" badge={chat.unread} onPress={() => setChatOpen(true)} />
+            <View style={{ paddingBottom: 4 }}>
+              <Text style={[common.h2, { color: theme.primary }]} numberOfLines={1}>{driverTitle(ride)}</Text>
+              <Text style={common.muted} numberOfLines={1}>
+                {ride.passengerName} · recebe {money(earningsOf(ride))}
+              </Text>
             </View>
           }
         >
@@ -458,7 +445,6 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
                 {PAYMENTS.find((p) => p.id === ride.payment)?.label} · recebe {money(earningsOf(ride))}
               </Text>
             </View>
-            <RoundButton icon="💬" label="Conversar com o passageiro" badge={chat.unread} onPress={() => setChatOpen(true)} />
           </View>
           {ride.note ? (
             <View style={styles.note}>
@@ -568,19 +554,6 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
         onClose={() => setCancelOpen(false)}
         onConfirm={cancelRide}
       />
-
-      {chatOpen && chatRideId && ride && (
-        <ChatPanel
-          role="driver"
-          otherName={ride.passengerName}
-          otherDetail="Passageiro"
-          messages={chat.messages}
-          typing={chat.typing}
-          send={chat.send}
-          sendTyping={chat.sendTyping}
-          onClose={() => setChatOpen(false)}
-        />
-      )}
     </View>
   );
 }

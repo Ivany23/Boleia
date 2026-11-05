@@ -271,65 +271,27 @@ test('preço garantido: ride:request com quoteId usa a cotação (sem nova rota)
   await until(() => statuses(pax).some((s) => s === 'no_drivers' || s === 'cancelled'));
 });
 
-test('chat: passageiro e motorista conversam; estranhos não', async () => {
+test('nota do passageiro chega ao motorista; motorista cancela com motivo', async () => {
   const z = ZONE(8);
   const driver = await online('economico', z);
   const pax = await client();
-  const stranger = await client();
   const r = await ack(pax, 'ride:request', reqBody({ pickup: z, note: '  Portão azul, ao lado da farmácia  ' }));
   const offer = await until(() => driver.log['ride:offer']?.[0]);
   assert.equal(offer.ride.note, 'Portão azul, ao lado da farmácia');
 
-  // antes de aceitar: sem conversa
-  const early = await ack(pax, 'chat:send', { rideId: r.ride.id, text: 'olá' });
-  assert.equal(early.ok, false);
-
   driver.emit('ride:accept', { rideId: r.ride.id });
   await waitStatus(pax, 'accepted');
 
-  const m1 = await ack(pax, 'chat:send', { rideId: r.ride.id, text: '  Estou ao lado da farmácia  ' });
-  assert.equal(m1.ok, true);
-  assert.equal(m1.message.from, 'passenger');
-  assert.equal(m1.message.text, 'Estou ao lado da farmácia');
-  await until(() => driver.log['chat:message']?.some((m) => m.id === m1.message.id));
+  // a conversa foi removida: o servidor ignora estes eventos
+  pax.emit('chat:send', { rideId: r.ride.id, text: 'olá' });
+  await new Promise((res) => setTimeout(res, 100));
+  assert.equal(driver.log['chat:message'], undefined);
 
-  const m2 = await ack(driver, 'chat:send', { rideId: r.ride.id, text: 'Chego em 2 min' });
-  assert.equal(m2.ok, true);
-  assert.equal(m2.message.from, 'driver');
-  await until(() => pax.log['chat:message']?.some((m) => m.id === m2.message.id));
-
-  driver.emit('chat:typing', { rideId: r.ride.id });
-  await until(() => pax.log['chat:typing']?.[0]);
-  assert.equal(pax.log['chat:typing'][0].from, 'driver');
-
-  const h = await ack(driver, 'chat:history', { rideId: r.ride.id });
-  assert.equal(h.ok, true);
-  assert.deepEqual(h.messages.map((m) => m.text), ['Estou ao lado da farmácia', 'Chego em 2 min']);
-
-  // estranho não lê nem escreve
-  assert.equal((await ack(stranger, 'chat:history', { rideId: r.ride.id })).ok, false);
-  assert.equal((await ack(stranger, 'chat:send', { rideId: r.ride.id, text: 'x' })).ok, false);
-  assert.equal(stranger.log['chat:message'], undefined);
-
-  // validações
-  assert.equal((await ack(pax, 'chat:send', { rideId: r.ride.id, text: '   ' })).ok, false);
-  assert.equal((await ack(pax, 'chat:send', { rideId: r.ride.id, text: 42 })).ok, false);
-  assert.equal((await ack(pax, 'chat:send', null)).ok, false);
-  const long = await ack(pax, 'chat:send', { rideId: r.ride.id, text: 'a'.repeat(900) });
-  assert.equal(long.message.text.length, 500);
-
-  // limite de ritmo: 8 por 10 s (já enviou 2)
-  const results = [];
-  for (let i = 0; i < 8; i++) results.push((await ack(pax, 'chat:send', { rideId: r.ride.id, text: `m${i}` })).ok);
-  assert.ok(results.includes(false), 'bloqueia spam');
-
-  // depois de terminar, a conversa fecha
   driver.emit('ride:cancel', { rideId: r.ride.id, reason: 'O passageiro não apareceu' });
   await waitStatus(pax, 'cancelled');
   const c = pax.log['ride:update'].find((u) => u.status === 'cancelled');
   assert.equal(c.cancelledBy, 'driver');
   assert.equal(c.cancelReason, 'O passageiro não apareceu');
-  assert.equal((await ack(driver, 'chat:history', { rideId: r.ride.id })).ok, false);
 });
 
 test('avaliação: só o passageiro, só uma vez, 1 a 5', async () => {
