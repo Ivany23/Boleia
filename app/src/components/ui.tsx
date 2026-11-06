@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tap } from '../haptics';
 import { shadow, theme } from '../theme';
 import type { Fare } from '../types';
-import { money, pct, type Tag } from '../utils';
+import { money, type Tag } from '../utils';
 
 type BtnProps = {
   title: string;
@@ -21,7 +21,8 @@ export function Button({ title, onPress, variant = 'primary', disabled, style }:
     ghost: 'transparent',
     danger: theme.dangerSoft,
   }[variant];
-  const color = { primary: '#fff', accent: theme.ink, ghost: theme.primary, danger: theme.danger }[variant];
+  // texto do botão amarelo sempre escuro (legível também no modo nocturno)
+  const color = { primary: '#fff', accent: '#0E1B14', ghost: theme.primary, danger: theme.danger }[variant];
   return (
     <Pressable
       onPress={() => {
@@ -242,7 +243,7 @@ export function FareDetails({ fare, perspective = 'passenger' }: { fare: Fare; p
     ['Tempo (inclui trânsito)', b.time],
   ];
   if (b.pickup) rows.push(['Ida do motorista até si', b.pickup]);
-  if (b.surcharge > 0) rows.push([`Ajuste horário/procura (${pct(fare.multiplier)})`, b.surcharge]);
+  if (b.surcharge > 0) rows.push(['Ajuste de horário e procura', b.surcharge]);
   if (b.surcharge < 0) rows.push(['Desconto (pouca procura)', b.surcharge]);
   if (b.guarantee) rows.push(['Garantia de ganho do motorista', b.guarantee]);
   if (b.serviceFee) rows.push(['Taxa de serviço', b.serviceFee]);
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     borderWidth: 2,
     borderColor: theme.primary,
     alignItems: 'center',
@@ -452,7 +453,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',
   },

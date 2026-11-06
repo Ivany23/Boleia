@@ -19,16 +19,17 @@ import { tap } from '../haptics';
 import { getPermission } from '../location';
 import { shadow, theme } from '../theme';
 import type { Category, Profile } from '../types';
-import { CATEGORIES, normalizePhone } from '../utils';
+import { CATEGORIES, formatPhone, normalizePhone } from '../utils';
 
-export function StartScreen({ onStart }: { onStart: (p: Profile) => void }) {
+export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => void; initial?: Partial<Profile> }) {
   const insets = useSafeAreaInsets();
-  const [role, setRole] = useState<'passenger' | 'driver'>('passenger');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [car, setCar] = useState('');
-  const [plate, setPlate] = useState('');
-  const [category, setCategory] = useState<Category>('economico');
+  // ao trocar de papel (menu), os dados já conhecidos vêm preenchidos
+  const [role, setRole] = useState<'passenger' | 'driver'>(initial?.role ?? 'passenger');
+  const [name, setName] = useState(initial?.name ?? '');
+  const [phone, setPhone] = useState(initial?.phone ? formatPhone(initial.phone) : '');
+  const [car, setCar] = useState(initial?.car ?? '');
+  const [plate, setPlate] = useState(initial?.plate ?? '');
+  const [category, setCategory] = useState<Category>(initial?.category ?? 'economico');
   const [denied, setDenied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

@@ -13,7 +13,6 @@ import {
   FareDetails,
   MapButton,
   Pin,
-  PriceTags,
   Sheet,
   common,
 } from '../components/ui';
@@ -23,7 +22,8 @@ import { notify } from '../haptics';
 import { bearing, useSmoothPoint } from '../motion';
 import { currentPosition } from '../location';
 import { getSocket } from '../socket';
-import { theme } from '../theme';
+import { darkMapStyle } from '../mapDark';
+import { isDark, theme } from '../theme';
 import type { LatLng, PricingInfo, Profile, Ride, RideOffer } from '../types';
 import {
   MAPUTO,
@@ -33,8 +33,6 @@ import {
   formatDistance,
   formatDuration,
   money,
-  pct,
-  priceTags,
   toRN,
   validPoint,
 } from '../utils';
@@ -45,7 +43,7 @@ const earningsOf = (r: Ride) => {
   return Number.isFinite(v) ? v : 0;
 };
 
-export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: () => void }) {
+export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: () => void }) {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const [pos, setPos] = useState<LatLng>(MAPUTO);
@@ -322,6 +320,8 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
         style={StyleSheet.absoluteFill}
         initialRegion={{ ...toRN(pos), latitudeDelta: 0.03, longitudeDelta: 0.03 }}
         showsUserLocation={false}
+        customMapStyle={isDark() ? darkMapStyle : undefined}
+        userInterfaceStyle={isDark() ? 'dark' : 'light'}
         showsMyLocationButton={false}
         showsBuildings
         pitchEnabled
@@ -349,15 +349,7 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
       </MapView>
 
       {!ride && (
-        <MapButton
-          icon="‹"
-          label="Voltar"
-          onPress={() => {
-            if (online) toggle(false);
-            onExit();
-          }}
-          style={[styles.back, { top: insets.top + 10 }]}
-        />
+        <MapButton icon="☰" label="Menu" onPress={onMenu} style={[styles.back, { top: insets.top + 10 }]} />
       )}
       {!ride && (
         <MapButton
@@ -406,7 +398,7 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
               <View style={{ flex: 1 }}>
                 <Text style={styles.periodTitle}>
                   {period.label}
-                  {period.multiplier > 1 ? ` · viagens rendem ${pct(period.multiplier)}` : ''}
+                  {period.multiplier > 1 ? ' · as viagens rendem mais' : ''}
                 </Text>
                 <Text style={common.muted}>
                   Gasolina {pricing.fuel.gasolina.toFixed(2).replace('.', ',')} MT/L · já incluída no preço
@@ -533,7 +525,6 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
                     Passageiro paga {money(offerRide.price)} · {PAYMENTS.find((p) => p.id === offerRide.payment)?.label}
                   </Text>
                 </View>
-                <PriceTags tags={priceTags(offerRide)} />
                 <Text style={common.muted}>
                   {formatDistance(offer?.pickupDistanceMeters)} até à recolha · viagem de {formatDistance(offerRide.distanceMeters)} (
                   {formatDuration(offerRide.durationSeconds)})
@@ -590,7 +581,7 @@ const styles = StyleSheet.create({
   paxCard: { backgroundColor: theme.bg, borderRadius: 16, padding: 12 },
   bigPrice: { fontSize: 36, fontWeight: '900', color: theme.primary, textAlign: 'center' },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  offer: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, gap: 10 },
+  offer: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, gap: 10 },
   offerEarn: { backgroundColor: theme.primary, borderRadius: 18, padding: 16, alignItems: 'center', gap: 2 },
   offerEarnValue: { color: '#fff', fontSize: 36, fontWeight: '900' },
   count: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' },

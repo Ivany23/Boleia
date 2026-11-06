@@ -1,0 +1,23 @@
+# Mantém o servidor gratuito do Render acordado (adormece após 15 min sem uso
+# e o primeiro pedido demora ~1 min). Gratuito: o repositório é público.
+name: Manter servidor acordado
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Chamar /api/health
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 https://boleia-server.onrender.com/api/health) || true
+            echo "tentativa $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "O servidor não respondeu (será tentado de novo daqui a 10 min)."

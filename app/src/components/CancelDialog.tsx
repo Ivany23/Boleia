@@ -76,8 +76,8 @@ export function CancelDialog({
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: 'rgba(6,33,15,0.45)', justifyContent: 'flex-end' },
-  card: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 12 },
+  bg: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' },
+  card: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 12 },
   grab: { alignSelf: 'center', width: 42, height: 5, borderRadius: 3, backgroundColor: theme.line },
   reason: {
     flexDirection: 'row',

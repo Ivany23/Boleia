@@ -1,0 +1,19 @@
+/** Estilo nocturno do Google Maps (telemóvel Android e site), em tons da marca. */
+export const darkMapStyle = [
+  { elementType: 'geometry', stylers: [{ color: '#1b2420' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9aaaa2' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#141b17' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2c3832' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#212b26' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#7f9188' }] },
+  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#173226' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2c3832' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#1b2420' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#b7c4bd' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#4a4122' }] },
+  { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#2b2614' }] },
+  { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#e8d9a6' }] },
+  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#25302a' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0e2a33' }] },
+  { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#4f7480' }] },
+];

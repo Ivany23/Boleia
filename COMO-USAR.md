@@ -85,6 +85,10 @@ DRIVER_MIN_HOURLY=300
 ```
 Todos os preços se ajustam sozinhos. `ROUTES_TRAFFIC=0` desliga o trânsito em tempo real (fica mais barato na Google).
 
+## Sessão, menu e modo nocturno
+- A app lembra-se de quem entrou: ao reabrir ou recarregar a página, vai directamente para o mapa.
+- O botão **☰** (canto superior esquerdo) abre o menu: **Modo nocturno** (Automático, que segue o telemóvel, Claro ou Escuro), **trocar entre passageiro e motorista** (os dados já vêm preenchidos) e **Terminar sessão**.
+
 ## Escolher um local no mapa
 Na pesquisa de destino (ou de recolha), tocar em **🗺️ Escolher no mapa**. Aparece um pino fixo no centro: arraste o mapa ou toque no local, veja a morada e carregue em **Confirmar**.
 

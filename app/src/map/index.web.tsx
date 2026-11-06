@@ -27,18 +27,48 @@ const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
  * existir, do servidor (GOOGLE_MAPS_WEB_KEY no Render, via /api/config).
  */
 let keyPromise: Promise<string | null> | null = null;
+const KEY_CACHE = 'boleia.mapsKey.v1';
+const cachedKey = () => {
+  try {
+    return localStorage.getItem(KEY_CACHE);
+  } catch {
+    return null;
+  }
+};
+function fetchKey(): Promise<string | null> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 5000);
+  return fetch(`${SERVER_URL}/api/config`, { signal: ctrl.signal })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => {
+      const k = j && typeof j.googleMapsWebKey === 'string' && j.googleMapsWebKey ? j.googleMapsWebKey : null;
+      try {
+        if (k) localStorage.setItem(KEY_CACHE, k);
+        else if (j) localStorage.removeItem(KEY_CACHE);
+      } catch {
+        // ignora
+      }
+      return k;
+    })
+    .catch(() => null)
+    .finally(() => clearTimeout(t));
+}
 function googleKey(): Promise<string | null> {
   if (GOOGLE_KEY) return Promise.resolve(GOOGLE_KEY);
   if (!keyPromise) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 5000);
-    keyPromise = fetch(`${SERVER_URL}/api/config`, { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => (j && typeof j.googleMapsWebKey === 'string' && j.googleMapsWebKey ? j.googleMapsWebKey : null))
-      .catch(() => null)
-      .finally(() => clearTimeout(t));
+    // Velocidade: usa logo a chave guardada da visita anterior e actualiza em segundo plano
+    const cached = cachedKey();
+    const fresh = fetchKey();
+    keyPromise = cached ? Promise.resolve(cached) : fresh;
   }
   return keyPromise;
+}
+
+/** Começa a carregar o Google Maps cedo (ex.: enquanto a pessoa se regista). */
+export function preloadMap() {
+  googleKey()
+    .then((k) => (k ? loadGoogle(k) : null))
+    .catch(() => {});
 }
 
 const ok = (c?: Coord | null): c is Coord =>
@@ -106,11 +136,13 @@ function loadGoogle(key: string): Promise<any> {
   return googlePromise;
 }
 
-function googleEngine(google: any, el: HTMLDivElement, start: Region, hooks: Hooks): Engine {
+function googleEngine(google: any, el: HTMLDivElement, start: Region, hooks: Hooks, styles?: unknown): Engine {
   const gm = google.maps;
   const map = new gm.Map(el, {
     center: { lat: start.latitude, lng: start.longitude },
     zoom: Math.round(zoomFor(start.latitudeDelta)),
+    styles: Array.isArray(styles) ? styles : undefined, // modo nocturno
+    backgroundColor: Array.isArray(styles) ? '#1b2420' : undefined,
     disableDefaultUI: true,
     clickableIcons: false,
     gestureHandling: 'greedy', // um dedo arrasta o mapa (sem "use dois dedos")
@@ -181,7 +213,7 @@ function ensureLeafletCss() {
   document.head.appendChild(link);
 }
 
-function leafletEngine(el: HTMLDivElement, start: Region, hooks: Hooks): Engine {
+function leafletEngine(el: HTMLDivElement, start: Region, hooks: Hooks, dark = false): Engine {
   ensureLeafletCss();
   const toLL = (c: Coord) => L.latLng(c.latitude, c.longitude);
   const map = L.map(el, {
@@ -195,6 +227,12 @@ function leafletEngine(el: HTMLDivElement, start: Region, hooks: Hooks): Engine 
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
+  // modo nocturno no OpenStreetMap: inverte as cores das imagens do mapa
+  if (dark) {
+    const pane = map.getPanes().tilePane;
+    if (pane) pane.style.filter = 'invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9)';
+    el.style.background = '#1b2420';
+  }
   map.on('move zoom resize', () => hooks.changed());
   map.on('dragstart', () => hooks.drag());
   map.on('moveend', () => hooks.idle());
@@ -286,6 +324,11 @@ export default class MapView extends React.Component<MapProps, MapState> {
     press: (c) => this.props.onPress?.({ nativeEvent: { coordinate: c } }),
   };
 
+  /** Modo nocturno: o ecrã passa um estilo de mapa (customMapStyle). */
+  private dark() {
+    return Array.isArray(this.props.customMapStyle);
+  }
+
   private startRegion(): Region {
     const r = this.props.initialRegion;
     return ok(r) ? r : { latitude: -25.9692, longitude: 32.5732, latitudeDelta: 0.03, longitudeDelta: 0.03 };
@@ -311,7 +354,7 @@ export default class MapView extends React.Component<MapProps, MapState> {
       ? { ...cur.center(), latitudeDelta: deltaFor(cur.zoom()), longitudeDelta: deltaFor(cur.zoom()) }
       : this.startRegion();
     cur?.destroy();
-    this.use(leafletEngine(this.el, region, this.hooks));
+    this.use(leafletEngine(this.el, region, this.hooks, this.dark()));
   }
 
   async componentDidMount() {
@@ -330,13 +373,13 @@ export default class MapView extends React.Component<MapProps, MapState> {
         const g = await loadGoogle(key);
         if (!this.alive || !this.el) return;
         authListeners.add(this.onAuthFail);
-        this.use(googleEngine(g, this.el, this.startRegion(), this.hooks));
+        this.use(googleEngine(g, this.el, this.startRegion(), this.hooks, this.props.customMapStyle));
         return;
       } catch (e) {
         console.warn('[mapa] Google Maps indisponível, a usar OpenStreetMap:', (e as Error)?.message);
       }
     }
-    if (this.alive && this.el) this.use(leafletEngine(this.el, this.startRegion(), this.hooks));
+    if (this.alive && this.el) this.use(leafletEngine(this.el, this.startRegion(), this.hooks, this.dark()));
   }
 
   componentWillUnmount() {
