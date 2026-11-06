@@ -65,11 +65,13 @@ type Ride = {
 
 `Surface = { sandMeters, sandRatio, pickupSand, dropoffSand } | null`: troços do percurso em estrada de areia/terra (dados do OpenStreetMap guardados no servidor, `server/src/data/sand-maputo.json`; `null` fora da Grande Maputo ou com `SURFACE_CHECK=0`).
 
+**Fórmula base (combustível):** combustível por km = preço do litro ÷ km por litro (Mota 35 — ex. LF49-D, Rolls —, Económico 9,5 — carro 1.5 —, Conforto 8 km/L). Preço por km = combustível + desgaste + lucro do motorista. Só se cobram os minutos **parados** (abaixo de 25 km/h). Ida até à recolha: 1.º km grátis, máx. 3 km pagos. **Tarifa de bairro** (`local: true` na cotação): destino e paragens até 2,5 km em linha recta da partida → metade da base e mínimo × 0,85. Taxa de serviço 5 MZN; ganho mínimo do motorista 150 MZN/h (Económico), depois do combustível.
+
 **Ajustes automáticos** (multiplicador total limitado a 0,9–1,6): horário; procura na zona (pedidos à espera por carro livre; **nenhum carro livre perto ×1,15, só um ×1,05**; **pico de pedidos** nos últimos 15 min acima de 2 por carro livre, até +15%; procura total máx. ×1,3); **chuva** em Maputo (Open-Meteo, fraca ×1,10, forte ×1,20; `rain` na cotação; desligar `WEATHER_CHECK=0`); aprendizagem. Sem dados de trânsito na hora de ponta, o tempo é estimado com +30%.
 
 **Carro parado:** `freeWaitMin` (3) minutos de espera grátis depois de `ride:arrived`; depois `waitRatePerMin` por minuto (combustível ao ralenti + ganho mínimo por hora), cobrado em `ride:start` (`breakdown.waiting`, `extraWaitMin`). Se a viagem demorar mais do que o previsto × 1,25 + 5 min (parado no trânsito), o excesso é cobrado em `ride:complete` (`breakdown.delay`, `extraDelayMin`). Máx. 60 min de cada; estes extras vão todos para o motorista e `ride.price` é actualizado.
 
-**Paragens:** até 3 (`MAX_STOPS`). Cada paragem soma um valor fixo (Mota 10, Económico 15, Conforto 20 MZN) mais 3 min de espera à tarifa por minuto. **Areia:** cada km em areia soma uma fracção do preço por km (Mota 30%, Económico 60%, Conforto 40%); a garantia do motorista inclui este custo extra.
+**Paragens:** até 3 (`MAX_STOPS`). Cada paragem soma um valor fixo (Mota 5, Económico 10, Conforto 15 MZN) mais 3 min de espera à tarifa por minuto. **Areia:** cada km em areia soma uma fracção do preço por km (Mota 30%, Económico 50%, Conforto 35%); a garantia do motorista inclui este custo extra.
 
 Erros: HTTP 4xx/5xx com `{ error: string }` (mensagem em português).
 

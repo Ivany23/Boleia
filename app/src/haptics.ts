@@ -1,6 +1,5 @@
 import * as Haptics from 'expo-haptics';
 
-// Vibração curta de feedback. Nunca deixa a app falhar se o aparelho não suportar.
 export const tap = () => {
   Haptics.selectionAsync().catch(() => {});
 };

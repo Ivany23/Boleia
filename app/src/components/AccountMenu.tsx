@@ -9,7 +9,6 @@ import { formatPhone } from '../utils';
 import { Avatar, common } from './ui';
 import { Icon } from './Icon';
 
-/** Recarrega a app para aplicar o tema (as cores são fixadas no arranque). */
 export function reloadApp() {
   if (Platform.OS === 'web') {
     window.location.reload();
@@ -18,7 +17,6 @@ export function reloadApp() {
   try {
     DevSettings.reload();
   } catch {
-    // em versões publicadas: o tema aplica-se na próxima abertura
   }
 }
 

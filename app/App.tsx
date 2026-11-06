@@ -6,7 +6,6 @@ import { loadProfile, loadThemePref, type ThemePref } from './src/storage';
 import { applyTheme } from './src/theme';
 import type { Profile } from './src/types';
 
-/** Web: liga cedo ao servidor e à Google (o servidor gratuito pode estar a "acordar"). */
 function warmUp() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
   for (const href of [SERVER_URL, 'https://maps.googleapis.com', 'https://maps.gstatic.com']) {
@@ -17,7 +16,7 @@ function warmUp() {
     document.head.appendChild(l);
   }
   fetch(`${SERVER_URL}/api/health`).catch(() => {});
-  // Suavidade no browser: texto nítido, sem "flash" ao tocar, transições de cor suaves
+
   if (!document.getElementById('boleia-css')) {
     const st = document.createElement('style');
     st.id = 'boleia-css';
@@ -34,10 +33,6 @@ function warmUp() {
 
 type Boot = { Root: React.ComponentType<{ initialProfile: Profile | null; themePref: ThemePref }>; profile: Profile | null; pref: ThemePref };
 
-/**
- * Arranque: lê o tema e a sessão guardados, aplica as cores e SÓ DEPOIS carrega
- * os ecrãs (os estilos são criados com as cores do tema escolhido).
- */
 export default function App() {
   const [boot, setBoot] = useState<Boot | null>(null);
 

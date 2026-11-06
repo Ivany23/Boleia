@@ -74,7 +74,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     setRide(r);
   };
 
-  // Tarifa em vigor e preço do combustível (actualiza a cada 5 min)
   useEffect(() => {
     let alive = true;
     const load = () =>
@@ -100,7 +99,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     });
   }, [profile]);
 
-  // Location watcher + 3s sender, only while online
   useEffect(() => {
     if (!online) return;
     let sub: Location.LocationSubscription | null = null;
@@ -132,7 +130,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     };
   }, [online]);
 
-  // Initial position
   useEffect(() => {
     let alive = true;
     currentPosition().then(({ pos: p }) => {
@@ -146,7 +143,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     };
   }, []);
 
-  // Socket events
   useEffect(() => {
     const s = getSocket();
     const onOffer = (o: RideOffer) => {
@@ -176,7 +172,7 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     const onConnect = () => {
       if (onlineRef.current) goOnline();
     };
-    // o servidor recusou ficar online (ex.: número de WhatsApp inválido)
+
     const onDriverError = (e: { error?: string }) => {
       onlineRef.current = false;
       setOnline(false);
@@ -195,7 +191,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     };
   }, [goOnline]);
 
-  // Offer countdown
   useEffect(() => {
     if (!offer || accepting) return;
     const t = setInterval(() => {
@@ -265,7 +260,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     mapRef.current?.animateCamera({ pitch: 0, heading: 0, center: toRN(posRef.current) }, { duration: 500 });
   }
 
-  /** Abre a navegação do Google Maps até à recolha (ou ao destino, já em viagem). */
   function navigate() {
     const r = rideRef.current;
     if (!r) return;
@@ -279,7 +273,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
 
   const live = !!ride && LIVE.includes(ride.status);
 
-  // Fit route when ride becomes active (vista geral; o modo 3D assume a seguir)
   useEffect(() => {
     const pts = cleanPath(ride?.polyline);
     if (ride && pts.length > 1 && !follow) {
@@ -291,7 +284,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ride?.id]);
 
-  // Câmara de navegação 3D: atrás do carro, inclinada e virada para onde segue
   useEffect(() => {
     if (!live || !follow) return;
     const prev = camRef.current;
@@ -592,7 +584,6 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
   );
 }
 
-/** Recolha, paragens (pela ordem) e destino. */
 function Addresses({ ride, lines }: { ride: Ride; lines: number }) {
   const row = (key: string, icon: 'location' | 'stop' | 'flag', color: string, text: string) => (
     <View key={key} style={styles.addrRow}>
@@ -610,7 +601,6 @@ function Addresses({ ride, lines }: { ride: Ride; lines: number }) {
   );
 }
 
-/** Aviso ao motorista: recolha/destino ou troços em estrada de areia. */
 function SandNote({ ride }: { ride: Ride }) {
   const s = ride.surface;
   if (!s || !(s.sandMeters >= 50 || s.pickupSand || s.dropoffSand)) return null;

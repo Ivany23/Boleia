@@ -24,7 +24,7 @@ import { CATEGORIES, formatPhone, normalizePhone } from '../utils';
 
 export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => void; initial?: Partial<Profile> }) {
   const insets = useSafeAreaInsets();
-  // ao trocar de papel (menu), os dados já conhecidos vêm preenchidos
+
   const [role, setRole] = useState<'passenger' | 'driver'>(initial?.role ?? 'passenger');
   const [name, setName] = useState(initial?.name ?? '');
   const [phone, setPhone] = useState(initial?.phone ? formatPhone(initial.phone) : '');
@@ -68,7 +68,7 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
         contentContainerStyle={{ paddingBottom: insets.bottom + 24, gap: 18 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Cabeçalho: gradiente verde → azul, estrada amarela e a frota 3D a flutuar */}
+
         <View style={[styles.hero, { paddingTop: insets.top + 20 }]}>
           <Svg style={StyleSheet.absoluteFill} viewBox="0 0 400 260" preserveAspectRatio="none">
             <Defs>

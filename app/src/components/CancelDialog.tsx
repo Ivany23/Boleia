@@ -10,7 +10,6 @@ const REASONS = {
   driver: ['O passageiro não apareceu', 'O passageiro pediu para cancelar', 'Local de recolha inacessível', 'Problema com o carro', 'Outro motivo'],
 };
 
-/** Confirmação de cancelamento com motivo (o outro lado vê quem cancelou e porquê). */
 export function CancelDialog({
   visible,
   role,

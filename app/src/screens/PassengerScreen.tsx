@@ -72,7 +72,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
   const [pickup, setPickup] = useState<Place | null>(null);
   const pickupCustom = useRef(false);
   const [dropoff, setDropoff] = useState<Place | null>(null);
-  // Paragens pelo caminho (opcional, até MAX_STOPS), pela ordem
+
   const [stops, setStops] = useState<Place[]>([]);
   const [search, setSearch] = useState<null | PlaceKind>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -92,7 +92,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
   const [follow, setFollow] = useState(false);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
-  // "Escolher no mapa": pino fixo no centro, a pessoa arrasta o mapa ou toca no local
+
   const [picking, setPicking] = useState<null | PlaceKind>(null);
   const [pickCenter, setPickCenter] = useState<LatLng | null>(null);
   const [pickPlace, setPickPlace] = useState<Place | null>(null);
@@ -104,7 +104,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     setRide(r);
   };
 
-  // Position + initial pickup address
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -112,7 +111,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
       if (!alive) return;
       posRef.current = p;
       setPos(p);
-      // Se a pessoa já escolheu um destino (o GPS demorou), não estraga o enquadramento do percurso
+
       if (quoteId.current === 0 && !rideRef.current) {
         mapRef.current?.animateToRegion({ ...toRN(p), latitudeDelta: 0.02, longitudeDelta: 0.02 }, 600);
       }
@@ -125,7 +124,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     };
   }, [profile.name]);
 
-  // Socket listeners
   useEffect(() => {
     const s = getSocket();
     const hello = () => {
@@ -160,7 +158,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     };
   }, [profile.name]);
 
-  // Quote when both places are known (and again when the guaranteed price expires)
   const stopsKey = stops.map((p) => `${p.lat},${p.lng}`).join('|');
   useEffect(() => {
     if (!pickup || !dropoff || rideRef.current) return;
@@ -176,7 +173,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
           setTimeout(
             () =>
               mapRef.current?.fitToCoordinates(pts.map(toRN), {
-                // o painel ocupa ~metade do ecrã: o percurso fica na metade de cima
                 edgePadding: { top: insets.top + 70, right: 40, bottom: Math.round(winH * 0.6), left: 40 },
                 animated: true,
               }),
@@ -195,7 +191,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng, stopsKey, insets.top, quoteNonce]);
 
-  // Renova a cotação um pouco antes de o preço garantido expirar
   useEffect(() => {
     if (!quote || ride) return;
     const secs = Number.isFinite(quote.validForSeconds) ? (quote.validForSeconds as number) : 300;
@@ -203,7 +198,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     return () => clearTimeout(t);
   }, [quote, ride]);
 
-  // Fit map to ride route when a ride is active
   useEffect(() => {
     const pts = cleanPath(ride?.polyline);
     if (ride && pts.length > 1 && !follow) {
@@ -215,7 +209,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ride?.id, ride?.status === 'in_progress']);
 
-  // Modo "seguir": câmara 3D inclinada atrás do carro do motorista
   const liveNow = !!ride && LIVE.includes(ride.status);
   useEffect(() => {
     if (!follow || !liveNow || !driverLoc) return;
@@ -266,15 +259,14 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
             return;
           }
           if (!rideRef.current) {
-            // cancelled locally while the request was in flight
             getSocket().emit('ride:cancel', { rideId: res.ride.id });
             return;
           }
-          // an update may already have arrived with a newer status
+
           if (rideRef.current.id !== res.ride.id) setRideBoth(res.ride);
         },
       );
-      // show the searching state immediately
+
       setRideBoth({
         id: 'pending',
         status: 'searching',
@@ -330,7 +322,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     reset();
   }
 
-  // Morada do ponto escolhido no mapa (espera o mapa parar meio segundo)
   useEffect(() => {
     if (!picking || !pickCenter) return;
     const c = pickCenter;
@@ -363,7 +354,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     setPicking(null);
   }
 
-  /** Guarda o local escolhido (pesquisa ou mapa) no sítio certo. */
   function setPlace(kind: PlaceKind, place: Place) {
     if (kind === 'dropoff') setDropoff(place);
     else if (kind === 'stop') setStops((list) => [...list, place].slice(0, MAX_STOPS));
@@ -420,7 +410,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
         onRegionChangeComplete={(r) => {
           if (Number.isFinite(r?.latitudeDelta)) lastDelta.current = r.latitudeDelta;
           if (picking && validPoint({ lat: r?.latitude, lng: r?.longitude })) {
-            // o mapa avisa "parou" mais do que uma vez no mesmo sítio: só conta se mudou
             setPickCenter((prev) =>
               prev && Math.abs(prev.lat - r.latitude) < 1e-6 && Math.abs(prev.lng - r.longitude) < 1e-6
                 ? prev
@@ -429,7 +418,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
           }
         }}
         onPress={(e) => {
-          // a escolher no mapa: tocar leva o pino a esse local
           const c = e?.nativeEvent?.coordinate;
           if (!picking || !c) return;
           mapRef.current?.animateToRegion(
@@ -497,7 +485,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
         </View>
       )}
 
-      {/* Escolher no mapa: pino fixo no centro + morada + confirmar */}
       {picking && (
         <>
           <View pointerEvents="none" style={styles.pickPinWrap}>
@@ -536,7 +523,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
         </>
       )}
 
-      {/* Sheets */}
       {!ride && !dropoff && !picking && (
         <Sheet>
           <Text style={styles.hello}>Olá, {profile.name.split(' ')[0]}</Text>
@@ -590,7 +576,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
             ) : undefined
           }
         >
-          {/* Recolha → paragens → destino num só cartão */}
+
           <View style={styles.route}>
             <View style={styles.routeRow}>
               <View style={styles.dot} />
@@ -683,7 +669,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
               ) : null}
               <PriceTags tags={tags} />
 
-              {/* Categorias lado a lado, com o veículo 3D a flutuar */}
               <View style={styles.cats}>
                 {CATEGORIES.map((c, i) => {
                   const on = category === c.id;
@@ -712,7 +697,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
                 })}
               </View>
 
-              {/* Pagamento e nota em botões pequenos */}
               <View style={[common.row, { gap: 6 }]}>
                 {PAYMENTS.map((p) => {
                   const on = payment === p.id;
@@ -952,7 +936,6 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
   );
 }
 
-/** Janela para escrever a nota ao motorista (fica no topo, o teclado nunca a tapa). */
 function NoteDialog({
   visible,
   value,
@@ -1016,7 +999,6 @@ function kindLabel(k: PlaceKind | null) {
   return k === 'pickup' ? 'Local de recolha' : k === 'stop' ? 'Paragem pelo caminho' : 'Destino';
 }
 
-/** Texto curto do aviso de areia, conforme onde está a areia. */
 function sandMessage(pickupSand: boolean, dropoffSand: boolean, sandMeters: number) {
   const where = [pickupSand ? 'recolha' : '', dropoffSand ? 'destino' : ''].filter(Boolean).join(' e ');
   const parts: string[] = [];
@@ -1064,10 +1046,9 @@ function SearchingPulse({ category }: { category: Category }) {
 
 const styles = StyleSheet.create({
   floating: { position: 'absolute', left: 16 },
-  // pino fixo no centro do ecrã: a ponta fica exactamente no centro do mapa
+
   pickPinWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  // altura do pino ≈ 53 (cabeça 34 + haste 16 + sombra 3); ponta a 50 px do topo.
-  // Centrado com marginBottom M, a ponta fica no centro quando M = 2 × 50 − 53 = 47.
+
   pickPin: { alignItems: 'center', marginBottom: 47 },
   pickHead: {
     width: 34,
@@ -1093,7 +1074,7 @@ const styles = StyleSheet.create({
   fleetText: { fontSize: 12, fontWeight: '700' },
   pickupMini: { gap: 8, minHeight: 28 },
   linkSmall: { color: theme.primary, fontWeight: '600', fontSize: 12.5, textAlign: 'center' },
-  // cartão recolha -> destino
+
   route: { backgroundColor: theme.bg, borderRadius: 14, paddingVertical: 6, paddingLeft: 12, paddingRight: 4 },
   routeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 30 },
   square: { width: 10, height: 10, borderRadius: 2, backgroundColor: theme.accentDark },

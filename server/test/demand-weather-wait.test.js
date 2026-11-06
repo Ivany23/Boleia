@@ -198,7 +198,7 @@ test('espera e atraso: valores por minuto, múltiplos de 5, com tecto', () => {
   assert.equal(extraCharge('economico', 0), 0);
   assert.equal(extraCharge('economico', -3), 0);
   assert.equal(extraCharge('economico', NaN), 0);
-  assert.equal(extraCharge('economico', 5), 30); // 5 × 6,12 = 30,6 -> 30
+  assert.equal(extraCharge('economico', 5), 20); // 5 × (1,12 ralenti + 150/60) = 18,1 -> 20
   assert.equal(extraCharge('economico', 0.1) % 5, 0);
   assert.ok(extraCharge('economico', 0.1) >= 5, 'um minuto começado conta');
   assert.equal(extraCharge('economico', 500), extraCharge('economico', 60), 'tecto de 60 min');

@@ -14,7 +14,6 @@ export async function getPermission(): Promise<'granted' | 'denied'> {
   }
 }
 
-/** Current position, falling back to last known, then Maputo centre. */
 export async function currentPosition(): Promise<{ pos: LatLng; fromGps: boolean }> {
   try {
     const p = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
@@ -24,7 +23,6 @@ export async function currentPosition(): Promise<{ pos: LatLng; fromGps: boolean
       const p = await Location.getLastKnownPositionAsync();
       if (p) return { pos: { lat: p.coords.latitude, lng: p.coords.longitude }, fromGps: true };
     } catch {
-      // ignore
     }
     return { pos: MAPUTO, fromGps: false };
   }
@@ -42,13 +40,11 @@ export async function addressOf(p: LatLng): Promise<string> {
       if (parts.length) return parts.join(', ');
     }
   } catch {
-    // no browser (web) o telemóvel não dá a morada: pergunta ao servidor
   }
   try {
     const r = await reverseGeocode(p);
     if (r.address && r.address !== 'Ponto no mapa') return r.address;
   } catch {
-    // ignore
   }
   return 'A minha localização';
 }

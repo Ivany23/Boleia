@@ -1,9 +1,15 @@
 /**
  * Motor de preços da Boleia (MZN): preço dinâmico, calculado viagem a viagem.
  *
- * 1. CUSTO REAL do motorista: combustível (preço ARENE) + desgaste por km,
- *    combustível ao ralenti por minuto parado no trânsito.
- * 2. TARIFA:   base + km × porKm + min × porMin + ida até à recolha (custo real)
+ * 1. CUSTO REAL do motorista, a partir do COMBUSTÍVEL:
+ *      combustível por km = preço do litro ÷ km por litro
+ *      (ex.: carro 1.5 faz 9,5 km/L; gasolina 94 MT/L -> ~9,9 MT por km)
+ *    + desgaste por km; combustível ao ralenti por minuto PARADO no trânsito.
+ * 2. TARIFA:   base + km × (combustível + desgaste + lucro) + minutos PARADOS × porMin
+ *              + ida até à recolha (o 1.º km é grátis). Os minutos a andar já estão pagos
+ *              nos km; só conta o tempo abaixo de FREE_FLOW_KMH (trânsito, semáforos).
+ *              TARIFA DE BAIRRO: destino a menos de LOCAL_RADIUS_M do ponto de partida
+ *              (mesmo bairro ou bairros vizinhos): metade da base e mínimo mais baixo.
  * 3. GARANTIA: o motorista recebe sempre, no mínimo, o custo real + ganho mínimo
  *              por hora de trabalho (ida até à recolha + viagem), por categoria
  * 4. AJUSTE:   × multiplicador (horário × procura/falta de carros × chuva × aprendizagem),
@@ -33,29 +39,39 @@ export const FUEL = {
 /** Comissão da plataforma (0,12 = 12%). */
 export const PLATFORM_FEE = envNum('PLATFORM_FEE', 0.12, 0, 0.4);
 /** Taxa de serviço fixa por viagem (MZN), toda para a plataforma. */
-export const SERVICE_FEE = envNum('SERVICE_FEE', 10, 0, 200);
+export const SERVICE_FEE = envNum('SERVICE_FEE', 5, 0, 200);
 /** Lucro mínimo do motorista por hora de trabalho (carro Económico), depois de combustível e desgaste (MZN). */
-export const DRIVER_MIN_HOURLY = envNum('DRIVER_MIN_HOURLY', 300, 0, 5000);
+export const DRIVER_MIN_HOURLY = envNum('DRIVER_MIN_HOURLY', 150, 0, 5000);
 /** A garantia acompanha a categoria: a mota custa menos a operar, o Conforto mais. */
 const HOURLY_FACTOR = { moto: 0.7, economico: 1, conforto: 1.3 };
 export const driverMinHourlyFor = (category) => DRIVER_MIN_HOURLY * (HOURLY_FACTOR[category] ?? 1);
 
 /** Distância de recolha usada quando não há motorista livre por perto (m). */
-export const DEFAULT_PICKUP_M = 1500;
-/** A ida até à recolha só é cobrada até este limite (km). */
-const MAX_PAID_PICKUP_KM = 5;
+export const DEFAULT_PICKUP_M = 1000;
+/** Ida até à recolha: o 1.º km é grátis e só se cobra até este limite (km). */
+const FREE_PICKUP_KM = 1;
+const MAX_PAID_PICKUP_KM = 3;
+/** Velocidade "a andar" na cidade: abaixo disto o tempo conta como parado (km/h). */
+export const FREE_FLOW_KMH = 25;
+/** Tarifa de bairro: destino (e paragens) até esta distância em linha recta da partida. */
+export const LOCAL_RADIUS_M = 2500;
+const LOCAL_BASE_FACTOR = 0.5;
+const LOCAL_MIN_FACTOR = 0.85;
 /** Velocidade média na ida até à recolha, em cidade (km/h). */
 const PICKUP_KMH = 20;
 
 /**
- * Custos por categoria (carros/motas típicos em Maputo, a gasolina).
- * consumo: L/100 km em cidade; ralenti: L/min parado no trânsito;
- * desgaste: pneus, óleo, manutenção, depreciação (MZN/km).
+ * Custos por categoria (veículos típicos de Maputo, a gasolina).
+ * kmPorLitro: km que faz com 1 litro na cidade (Económico = carro 1.5: 9,5 km/L;
+ *   Mota = motas de Maputo como a LF49-D e a Rolls: 35 km/L);
+ * ralenti: L/min parado; desgaste: pneus, óleo, manutenção (MZN/km);
+ * ganhoKm: lucro do motorista por km; ganhoMin: lucro por minuto PARADO;
+ * base: arranque; minimo: valor mínimo antes da taxa de serviço.
  */
 export const CATEGORY_COSTS = {
-  moto: { consumo: 3.0, ralenti: 0.004, desgaste: 1.5, ganhoKm: 2.5, ganhoMin: 0.9, base: 20, minimo: 30, paragem: 10, areia: 0.3 },
-  economico: { consumo: 7.5, ralenti: 0.012, desgaste: 3.5, ganhoKm: 3.8, ganhoMin: 1.8, base: 35, minimo: 70, paragem: 15, areia: 0.6 },
-  conforto: { consumo: 9.5, ralenti: 0.015, desgaste: 5.0, ganhoKm: 6.0, ganhoMin: 2.4, base: 60, minimo: 110, paragem: 20, areia: 0.4 },
+  moto: { kmPorLitro: 35, ralenti: 0.003, desgaste: 0.6, ganhoKm: 2.8, ganhoMin: 0.8, base: 10, minimo: 25, paragem: 5, areia: 0.3 },
+  economico: { kmPorLitro: 9.5, ralenti: 0.012, desgaste: 1.5, ganhoKm: 3.5, ganhoMin: 1.5, base: 15, minimo: 45, paragem: 10, areia: 0.5 },
+  conforto: { kmPorLitro: 8, ralenti: 0.015, desgaste: 2.5, ganhoKm: 5.5, ganhoMin: 2.0, base: 25, minimo: 70, paragem: 15, areia: 0.35 },
 };
 // paragem: valor fixo por paragem intermédia (MZN), além de STOP_WAIT_MIN minutos de espera.
 // areia: custo extra por km em estrada de areia/terra, em fracção do preço por km
@@ -77,13 +93,15 @@ export const MAX_MULTIPLIER = 1.6;
 export function ratesFor(category, fuelPrice = FUEL.gasolina) {
   const c = CATEGORY_COSTS[category];
   if (!c) throw new Error('Categoria invalida');
-  const fuelKm = (c.consumo / 100) * fuelPrice;
+  const fuelKm = fuelPrice / c.kmPorLitro;
   const idleMin = c.ralenti * fuelPrice;
   return {
     base: c.base,
     minimo: c.minimo,
     paragem: c.paragem,
     areia: c.areia,
+    /** combustível por km (preço do litro ÷ km por litro) */
+    fuelKm,
     /** custo real por km (combustível + desgaste) */
     costKm: fuelKm + c.desgaste,
     /** custo real por minuto parado */
@@ -220,7 +238,7 @@ export function fareFor(
   category,
   distanceMeters,
   durationSeconds,
-  { multiplier = 1, fuelPrice, pickupMeters = DEFAULT_PICKUP_M, stops = 0, sandMeters = 0 } = {},
+  { multiplier = 1, fuelPrice, pickupMeters = DEFAULT_PICKUP_M, stops = 0, sandMeters = 0, local = false } = {},
 ) {
   const r = ratesFor(category, fuelPrice);
   const km = Math.max(0, Number(distanceMeters) || 0) / 1000;
@@ -230,13 +248,17 @@ export function fareFor(
   const nStops = Math.min(MAX_STOPS, Math.max(0, Math.floor(Number(stops) || 0)));
   const sandKm = Math.min(km, Math.max(0, Number(sandMeters) || 0) / 1000);
   const stopMin = nStops * STOP_WAIT_MIN;
+  // só o tempo PARADO (abaixo de FREE_FLOW_KMH) é cobrado por minuto; o resto já está nos km
+  const stoppedMin = Math.max(0, min - (km / FREE_FLOW_KMH) * 60);
+  const base = local ? r.base * LOCAL_BASE_FACTOR : r.base;
+  const minimo = local ? r.minimo * LOCAL_MIN_FACTOR : r.minimo;
 
   // 2. tarifa
   const raw = {
-    base: r.base,
+    base,
     distance: km * r.porKm,
-    time: min * r.porMin,
-    pickup: Math.min(pickupKm, MAX_PAID_PICKUP_KM) * r.costKm,
+    time: stoppedMin * r.porMin,
+    pickup: Math.min(Math.max(0, pickupKm - FREE_PICKUP_KM), MAX_PAID_PICKUP_KM) * r.costKm,
     stops: nStops * r.paragem + stopMin * r.porMin,
     sand: sandKm * r.porKm * r.areia,
   };
@@ -245,7 +267,7 @@ export function fareFor(
   // 3. garantia: custo real + lucro mínimo por hora de trabalho (ida + viagem + paragens)
   const engagedMin = min + stopMin + (pickupKm / PICKUP_KMH) * 60;
   const driverCost =
-    (km + pickupKm) * r.costKm + (min + stopMin) * r.costMin + sandKm * r.costKm * r.areia;
+    (km + pickupKm) * r.costKm + (stoppedMin + stopMin) * r.costMin + sandKm * r.costKm * r.areia;
   const floorNet = driverCost + (driverMinHourlyFor(category) / 60) * engagedMin;
   const guaranteed = Math.max(tariff, floorNet);
   const guarantee = guaranteed - tariff;
@@ -255,7 +277,9 @@ export function fareFor(
   const net = Math.max(guaranteed * m, floorNet);
 
   // 5. plataforma
-  const fare = round5(Math.max(net / (1 - PLATFORM_FEE), r.minimo * m));
+  // com subida (ponta, noite, chuva…) arredonda para CIMA: a subida nunca desaparece no arredondamento
+  const preFee = Math.max(net / (1 - PLATFORM_FEE), minimo * m);
+  const fare = m > 1 ? Math.ceil(preFee / 5 - 1e-9) * 5 : round5(preFee);
   const total = fare + round5(SERVICE_FEE);
   const platformFee = Math.round(fare * PLATFORM_FEE) + round5(SERVICE_FEE);
   const driverEarnings = total - platformFee;
@@ -284,6 +308,7 @@ export function fareFor(
     platformFee,
     multiplier: Math.round(m * 100) / 100,
     driverCost: Math.round(driverCost),
+    local: !!local,
     breakdown,
   };
 }
@@ -316,6 +341,7 @@ export function priceRoute(
     stops = 0,
     sandMeters = 0,
     rain = 1,
+    local = false,
   } = {},
 ) {
   const period = periodAt(date);
@@ -340,6 +366,7 @@ export function priceRoute(
       pickupMeters: Number.isFinite(p) ? p : DEFAULT_PICKUP_M,
       stops,
       sandMeters,
+      local,
     });
     prices[c] = fares[c].total;
   }
@@ -349,6 +376,7 @@ export function priceRoute(
     period: { id: period.id, label: period.label, multiplier: period.multiplier },
     highDemand: demandMax > 1,
     fewDrivers,
+    local: !!local,
     rain: rainM > 1 ? { multiplier: rainM } : null,
     waitRates,
     freeWaitMin: FREE_WAIT_MIN,
@@ -384,6 +412,8 @@ export function pricingInfo(date = new Date()) {
           {
             base: r.base,
             minimo: r.minimo,
+            kmPorLitro: CATEGORY_COSTS[c].kmPorLitro,
+            combustivelPorKm: +r.fuelKm.toFixed(2),
             porKm: +r.porKm.toFixed(2),
             porMin: +r.porMin.toFixed(2),
             paragem: +(r.paragem + STOP_WAIT_MIN * r.porMin).toFixed(2),

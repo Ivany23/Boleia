@@ -28,43 +28,76 @@ const sumBreakdown = (b) => Object.values(b).reduce((a, x) => a + x, 0);
 
 test('configuração por omissão', () => {
   assert.equal(PLATFORM_FEE, 0.12);
-  assert.equal(SERVICE_FEE, 10);
-  assert.equal(DRIVER_MIN_HOURLY, 300);
+  assert.equal(SERVICE_FEE, 5);
+  assert.equal(DRIVER_MIN_HOURLY, 150);
 });
 
-test('garantia por categoria: moto 210, económico 300, conforto 390 MZN/hora', () => {
-  assert.equal(driverMinHourlyFor('moto'), 210);
-  assert.equal(driverMinHourlyFor('economico'), 300);
-  assert.equal(driverMinHourlyFor('conforto'), 390);
+test('garantia por categoria: moto 105, económico 150, conforto 195 MZN/hora', () => {
+  assert.equal(driverMinHourlyFor('moto'), 105);
+  assert.equal(driverMinHourlyFor('economico'), 150);
+  assert.equal(driverMinHourlyFor('conforto'), 195);
   // viagem curta (850 m / 4 min): a moto fica bem mais barata do que o carro
   const p = allPrices(850, 240);
   assert.ok(p.moto <= p.economico * 0.65, JSON.stringify(p));
 });
 
-test('preço: económico 5 km / 10 min, recolha 1,5 km (calculado à mão)', () => {
-  // custo/km = 7,5/100 × 93,69 + 3,5 = 10,527 ; porKm = 10,527 + 3,8 = 14,327 ; porMin = 0,012 × 93,69 + 1,8 = 2,924
-  // tarifa = 35 + 71,63 + 29,24 + recolha 1,5 × 10,527 (15,79) = 151,67
-  // custo do motorista = 6,5 km × 10,527 + 10 min × 1,124 = 79,67
-  // garantia = 79,67 + 300/60 × (10 + 4,5 min de recolha) = 152,17  -> líquido 152,17 (garantia de 0,5)
-  // 152,17 / 0,88 = 172,9 -> 175 ; + taxa de serviço 10 = 185
+test('combustível: carro 1.5 faz 9,5 km/L -> gasolina 93,69 / 9,5 = 9,86 MT por km', () => {
+  const r = ratesFor('economico');
+  assert.ok(Math.abs(r.fuelKm - 93.69 / 9.5) < 1e-9);
+  assert.ok(Math.abs(ratesFor('economico', 94).fuelKm - 94 / 9.5) < 1e-9);
+  assert.ok(Math.abs(ratesFor('moto').fuelKm - 93.69 / 35) < 1e-9);
+  assert.ok(Math.abs(ratesFor('conforto').fuelKm - 93.69 / 8) < 1e-9);
+});
+
+test('preço: económico 5 km / 10 min, recolha 1 km (calculado à mão)', () => {
+  // combustível/km = 93,69 / 9,5 = 9,862 ; custo/km = 9,862 + 1,5 = 11,362 ; porKm = 11,362 + 3,5 = 14,862
+  // 5 km em 10 min = 30 km/h: nada parado -> 0 min cobrados ; recolha de 1 km = grátis
+  // tarifa = 15 + 5 × 14,862 = 89,31
+  // garantia = custo 6 km × 11,362 (68,17) + 150/60 × (10 + 3 min de recolha) (32,5) = 100,67 -> líquido 100,67
+  // 100,67 / 0,88 = 114,4 -> 115 ; + taxa de serviço 5 = 120
   const f = fareFor('economico', 5000, 600);
-  assert.equal(f.total, 185);
-  assert.equal(f.platformFee, 21 + 10);
-  assert.equal(f.driverEarnings, 154);
+  assert.equal(f.total, 120);
+  assert.equal(f.platformFee, 14 + 5);
+  assert.equal(f.driverEarnings, 101);
+  assert.equal(f.breakdown.time, 0, 'a andar, os minutos já estão pagos nos km');
   assert.ok(f.breakdown.guarantee > 0, 'a garantia do motorista foi activada');
+  assert.ok(f.driverEarnings - f.driverCost >= 30, 'o motorista tem lucro depois do combustível');
 });
 
 test('preço: motorista ao lado (recolha 0 m) fica mais barato', () => {
-  // tarifa = 35 + 71,63 + 29,24 = 135,88 ; garantia = 52,63 + 11,24 + 50 = 113,88 (não activa)
-  // 135,88 / 0,88 = 154,4 -> 155 ; + 10 = 165
-  assert.equal(priceFor('economico', 5000, 600, { pickupMeters: 0 }), 165);
-  assert.ok(priceFor('economico', 5000, 600, { pickupMeters: 4000 }) > 185);
+  // tarifa = 89,31 ; garantia = 56,81 + 25 = 81,81 (não activa) ; 89,31 / 0,88 = 101,5 -> 100 ; + 5 = 105
+  assert.equal(priceFor('economico', 5000, 600, { pickupMeters: 0 }), 105);
+  assert.ok(priceFor('economico', 5000, 600, { pickupMeters: 4000 }) > 120);
 });
 
 test('preço: mínimos por categoria (+ taxa de serviço)', () => {
-  assert.equal(priceFor('moto', 0, 0, { pickupMeters: 0 }), 30 + 10);
-  assert.equal(priceFor('economico', 500, 60, { pickupMeters: 0 }), 70 + 10);
-  assert.equal(priceFor('conforto', 0, 0, { pickupMeters: 0 }), 110 + 10);
+  assert.equal(priceFor('moto', 0, 0, { pickupMeters: 0 }), 25 + 5);
+  assert.equal(priceFor('economico', 500, 60, { pickupMeters: 0 }), 45 + 5);
+  assert.equal(priceFor('conforto', 0, 0, { pickupMeters: 0 }), 70 + 5);
+});
+
+test('tarifa de bairro: viagens perto do ponto de partida ficam mais baratas', () => {
+  for (const c of CATEGORIES) {
+    const city = priceFor(c, 1000, 180, { pickupMeters: 0 });
+    const local = priceFor(c, 1000, 180, { pickupMeters: 0, local: true });
+    assert.ok(local < city, `${c}: ${local} >= ${city}`);
+    const f = fareFor(c, 1000, 180, { pickupMeters: 0, local: true });
+    assert.equal(f.local, true);
+    assert.ok(f.driverEarnings >= f.driverCost, 'mesmo no bairro, o motorista nunca perde');
+  }
+});
+
+test('preço: barato e sempre com lucro para o motorista (cidade, 22 km/h)', () => {
+  const at = (c, km) => fareFor(c, km * 1000, (km / 22) * 3600, { pickupMeters: 500 });
+  assert.ok(at('economico', 5).total <= 125);
+  assert.ok(at('economico', 1).total <= 50);
+  assert.ok(at('moto', 5).total <= 60);
+  for (const c of CATEGORIES) {
+    for (const km of [1, 3, 5, 10, 20]) {
+      const f = at(c, km);
+      assert.ok(f.driverEarnings > f.driverCost, `${c} ${km} km: sem lucro`);
+    }
+  }
 });
 
 test('preço: viagens curtas não ficam todas com o mesmo preço', () => {
@@ -114,8 +147,8 @@ test('tarifa: repartição soma o total; motorista + plataforma = total', () => 
         const f = fareFor(c, m, s, { multiplier: mult, pickupMeters: pk });
         assert.equal(f.driverEarnings + f.platformFee, f.total);
         assert.equal(sumBreakdown(f.breakdown), f.total, JSON.stringify(f));
-        assert.equal(f.breakdown.serviceFee, 10);
-        assert.ok(f.platformFee >= 10);
+        assert.equal(f.breakdown.serviceFee, SERVICE_FEE);
+        assert.ok(f.platformFee >= SERVICE_FEE);
       }
     }
   }
@@ -127,7 +160,9 @@ test('garantia: o motorista recebe sempre custo + lucro mínimo por hora', () =>
       const f = fareFor(c, m, s, { pickupMeters: pk });
       const r = ratesFor(c);
       const engagedMin = s / 60 + (pk / 1000 / 20) * 60;
-      const cost = ((m + pk) / 1000) * r.costKm + (s / 60) * r.costMin;
+      // a andar, o combustível está nos km; ao ralenti só conta o tempo parado (abaixo de 25 km/h)
+      const stopped = Math.max(0, s / 60 - (m / 1000 / 25) * 60);
+      const cost = ((m + pk) / 1000) * r.costKm + stopped * r.costMin;
       const floor = cost + (driverMinHourlyFor(c) / 60) * engagedMin;
       // tolerância de arredondamento (múltiplos de 5 MZN e comissão inteira)
       assert.ok(f.driverEarnings >= floor - 5, `${c} ${m}m ${s}s: ${f.driverEarnings} < ${floor.toFixed(1)}`);
@@ -198,8 +233,10 @@ test('pricingInfo', () => {
   const i = pricingInfo(WED_NOON);
   assert.equal(i.fuel.gasolina, 93.69);
   assert.equal(i.fuel.gasoleo, 116.25);
-  assert.equal(i.serviceFee, 10);
-  assert.equal(i.driverMinHourly, 300);
+  assert.equal(i.serviceFee, 5);
+  assert.equal(i.driverMinHourly, 150);
+  assert.ok(Math.abs(i.rates.economico.combustivelPorKm - 9.86) < 0.01);
+  assert.equal(i.rates.economico.kmPorLitro, 9.5);
   assert.equal(i.period.id, 'normal');
   assert.ok(i.rates.economico.porKm > 14 && i.rates.economico.porKm < 15);
   assert.equal(i.maxStops, 3);
@@ -322,7 +359,7 @@ test('cotações: preço garantido 5 min e só para os mesmos locais', async () 
   const q = await qs.quote(A, B);
   assert.equal(quotesSeen, 1);
   assert.equal(typeof q.quoteId, 'string');
-  assert.equal(q.prices.economico, 165);
+  assert.equal(q.prices.economico, 105);
   assert.equal(q.staticDurationSeconds, 600);
   assert.deepEqual(q.stops, []);
   assert.equal(q.surface, null);
@@ -354,7 +391,7 @@ test('cotações: uma falha nas funções de mercado não bloqueia o preço', as
     },
   });
   const q = await qs.quote({ lat: -25.96, lng: 32.58 }, { lat: -25.95, lng: 32.59 });
-  assert.equal(q.prices.economico, 185);
+  assert.equal(q.prices.economico, 120);
 });
 
 test('polyline: exemplo da documentação do Google', () => {

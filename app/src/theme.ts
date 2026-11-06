@@ -1,11 +1,6 @@
 import { Platform } from 'react-native';
 import type { Category } from './types';
 
-/**
- * Identidade Boleia: verde profissional + âmbar + azul, com uma cor própria
- * para cada tipo de veículo (Mota laranja, Económico âmbar, Conforto azul)
- * e tons suaves de apoio (violeta para paragens, areia para estradas de terra).
- */
 const LIGHT = {
   primary: '#0A7A4B',
   primaryDark: '#075232',
@@ -43,7 +38,6 @@ const LIGHT = {
   radius: 16,
 };
 
-/** Modo nocturno (só quando a pessoa o escolhe no menu). */
 const DARK: typeof LIGHT = {
   primary: '#22B573',
   primaryDark: '#6BDCA5',
@@ -83,11 +77,6 @@ const DARK: typeof LIGHT = {
 
 export type ThemeMode = 'light' | 'dark';
 
-/**
- * Cores em uso. É um objecto mutável de propósito: applyTheme() é chamado no
- * arranque (App.tsx) ANTES de os ecrãs serem carregados, por isso os estilos
- * criados com StyleSheet.create já nascem com as cores certas.
- */
 export const theme = { ...LIGHT };
 export let themeMode: ThemeMode = 'light';
 export const isDark = () => themeMode === 'dark';
@@ -97,14 +86,12 @@ export function applyTheme(mode: ThemeMode) {
   Object.assign(theme, mode === 'dark' ? DARK : LIGHT);
 }
 
-/** Cor principal e fundo suave de cada categoria de veículo. */
 export function categoryColors(c: Category | undefined) {
   if (c === 'moto') return { fg: theme.catMoto, soft: theme.catMotoSoft };
   if (c === 'conforto') return { fg: theme.catComfort, soft: theme.catComfortSoft };
   return { fg: theme.catEco, soft: theme.catEcoSoft };
 }
 
-/** Sombra suave e consistente (iOS + Android + web). */
 export const shadow = (level: 1 | 2 | 3 = 1) =>
   Platform.select({
     ios: {

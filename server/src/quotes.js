@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { haversine } from './geo.js';
-import { priceRoute } from './pricing.js';
+import { LOCAL_RADIUS_M, priceRoute } from './pricing.js';
 
 export const QUOTE_TTL_MS = 5 * 60 * 1000;
 const SAME_PLACE_M = 150;
@@ -75,6 +75,8 @@ export function createQuoteService({
       stops: via.length,
       sandMeters: sand?.sandMeters ?? 0,
       rain: wx?.multiplier ?? 1,
+      // tarifa de bairro: destino e paragens perto do ponto de partida
+      local: haversine(origin, destination) <= LOCAL_RADIUS_M && via.every((p) => haversine(origin, p) <= LOCAL_RADIUS_M),
     });
     const value = {
       quoteId: randomUUID(),

@@ -3,10 +3,6 @@ import { Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { theme } from '../theme';
 
-/**
- * Símbolo Boleia: um pino de localização amarelo "em movimento" (linhas de
- * velocidade) sobre um quadrado verde arredondado. Simples, legível em pequeno.
- */
 export function LogoMark({ size = 56 }: { size?: number }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100">
@@ -21,18 +17,17 @@ export function LogoMark({ size = 56 }: { size?: number }) {
         </LinearGradient>
       </Defs>
       <Rect x="0" y="0" width="100" height="100" rx="24" fill="url(#bg)" />
-      {/* linhas de velocidade */}
+
       <Rect x="14" y="34" width="20" height="6" rx="3" fill={theme.accent} opacity={0.95} />
       <Rect x="20" y="46" width="14" height="6" rx="3" fill={theme.accent} opacity={0.7} />
       <Rect x="26" y="58" width="8" height="6" rx="3" fill={theme.accent} opacity={0.45} />
-      {/* pino: círculo + ponta tangente */}
+
       <Path d="M58 22 a22 22 0 0 1 18.5 33.9 L58 84 L39.5 55.9 A22 22 0 0 1 58 22 Z" fill="url(#pin)" />
       <Circle cx="58" cy="44" r="8.5" fill={theme.primaryDark} />
     </Svg>
   );
 }
 
-/** Símbolo + nome "boleia" com ponto amarelo. */
 export function Logo({ size = 44, light = false }: { size?: number; light?: boolean }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: size * 0.25 }}>

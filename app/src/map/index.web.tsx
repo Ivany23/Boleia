@@ -1,18 +1,3 @@
-/**
- * Mapa para a versão web (Vercel), com a mesma interface que usamos do
- * react-native-maps: <MapView>, <Marker>, <Polyline>, os métodos
- * animateToRegion / fitToCoordinates / animateCamera e os eventos
- * onPress, onPanDrag e onRegionChangeComplete.
- *
- * Motor:
- *  - Google Maps (igual ao telemóvel) se houver chave do site: EXPO_PUBLIC_GOOGLE_MAPS_KEY
- *    (Vercel) ou GOOGLE_MAPS_WEB_KEY no servidor (Render, lida em /api/config);
- *  - sem Google (sem chave, não carregou em 10 s ou recusou a chave): mapa vectorial
- *    moderno OpenFreeMap (estilo "Liberty": claro, colorido, nítido em qualquer zoom;
- *    gratuito, sem chave, uso comercial permitido) com o motor MapLibre GL;
- *  - só se o browser não tiver WebGL ou o MapLibre não carregar: Leaflet com as
- *    imagens do OpenStreetMap (última reserva).
- */
 import L from 'leaflet';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
@@ -25,10 +10,6 @@ type MapPressEvent = { nativeEvent: { coordinate: Coord } };
 
 const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
 
-/**
- * Chave do Google Maps do site: da Vercel (EXPO_PUBLIC_GOOGLE_MAPS_KEY) ou, se não
- * existir, do servidor (GOOGLE_MAPS_WEB_KEY no Render, via /api/config).
- */
 let keyPromise: Promise<string | null> | null = null;
 const KEY_CACHE = 'boleia.mapsKey.v1';
 const cachedKey = () => {
@@ -49,7 +30,6 @@ function fetchKey(): Promise<string | null> {
         if (k) localStorage.setItem(KEY_CACHE, k);
         else if (j) localStorage.removeItem(KEY_CACHE);
       } catch {
-        // ignora
       }
       return k;
     })
@@ -59,7 +39,6 @@ function fetchKey(): Promise<string | null> {
 function googleKey(): Promise<string | null> {
   if (GOOGLE_KEY) return Promise.resolve(GOOGLE_KEY);
   if (!keyPromise) {
-    // Velocidade: usa logo a chave guardada da visita anterior e actualiza em segundo plano
     const cached = cachedKey();
     const fresh = fetchKey();
     keyPromise = cached ? Promise.resolve(cached) : fresh;
@@ -67,7 +46,6 @@ function googleKey(): Promise<string | null> {
   return keyPromise;
 }
 
-/** Começa a carregar o Google Maps cedo (ex.: enquanto a pessoa se regista). */
 export function preloadMap() {
   googleKey()
     .then((k) => (k ? loadGoogle(k) : webglOK() ? loadMapLibre() : null))
@@ -79,7 +57,6 @@ const ok = (c?: Coord | null): c is Coord =>
 const zoomFor = (delta: number) => Math.max(3, Math.min(19, Math.log2(360 / Math.max(delta, 1e-6))));
 const deltaFor = (zoom: number) => 360 / Math.pow(2, zoom);
 
-/** O que cada motor (Google / Leaflet) tem de saber fazer. */
 type Engine = {
   kind: 'google' | 'vector' | 'leaflet';
   project(c: Coord): { x: number; y: number } | null;
@@ -92,10 +69,6 @@ type Engine = {
   destroy(): void;
 };
 type Hooks = { changed(): void; drag(): void; idle(): void; press(c: Coord): void };
-
-// ---------------------------------------------------------------------------
-// Google Maps
-// ---------------------------------------------------------------------------
 
 let googlePromise: Promise<any> | null = null;
 let googleAuthFailed = false;
@@ -133,13 +106,12 @@ function loadGoogle(key: string): Promise<any> {
     };
     document.head.appendChild(s);
   }).catch((e) => {
-    googlePromise = null; // permite tentar de novo mais tarde
+    googlePromise = null;
     throw e;
   });
   return googlePromise;
 }
 
-/** Google Maps claro: menos ruído (negócios), estradas e bairros bem legíveis. */
 const LIGHT_STYLE = [
   { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
   { featureType: 'poi', elementType: 'labels.icon', stylers: [{ saturation: -30 }, { lightness: 15 }] },
@@ -157,11 +129,11 @@ function googleEngine(google: any, el: HTMLDivElement, start: Region, hooks: Hoo
   const map = new gm.Map(el, {
     center: { lat: start.latitude, lng: start.longitude },
     zoom: Math.round(zoomFor(start.latitudeDelta)),
-    styles: Array.isArray(styles) ? styles : LIGHT_STYLE, // modo nocturno / claro
+    styles: Array.isArray(styles) ? styles : LIGHT_STYLE,
     backgroundColor: Array.isArray(styles) ? '#1b2420' : undefined,
     disableDefaultUI: true,
     clickableIcons: false,
-    gestureHandling: 'greedy', // um dedo arrasta o mapa (sem "use dois dedos")
+    gestureHandling: 'greedy',
     keyboardShortcuts: false,
   });
   const overlay = new gm.OverlayView();
@@ -214,10 +186,6 @@ function googleEngine(google: any, el: HTMLDivElement, start: Region, hooks: Hoo
   };
 }
 
-// ---------------------------------------------------------------------------
-// OpenFreeMap (MapLibre GL): mapa vectorial, gratuito e sem chave
-// ---------------------------------------------------------------------------
-
 const MAPLIBRE = 'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl';
 const MAPLIBRE_SRI = {
   js: 'sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj',
@@ -225,7 +193,6 @@ const MAPLIBRE_SRI = {
 };
 let mlPromise: Promise<any> | null = null;
 
-/** O browser consegue desenhar mapas vectoriais (WebGL)? */
 function webglOK() {
   try {
     const c = document.createElement('canvas');
@@ -241,7 +208,6 @@ function loadMapLibre(): Promise<any> {
   if (mlPromise) return mlPromise;
   mlPromise = new Promise((resolve, reject) => {
     if (!document.getElementById('maplibre-css')) {
-      // liga já ao servidor do mapa enquanto o script carrega
       const pre = document.createElement('link');
       pre.rel = 'preconnect';
       pre.href = 'https://tiles.openfreemap.org';
@@ -278,7 +244,6 @@ function loadMapLibre(): Promise<any> {
   return mlPromise;
 }
 
-// O MapLibre usa mosaicos de 512 px: o mesmo enquadramento tem zoom 1 abaixo do Google/Leaflet
 const ZOFF = 1;
 let lineSeq = 0;
 
@@ -298,12 +263,11 @@ function vectorEngine(ml: any, el: HTMLDivElement, start: Region, hooks: Hooks, 
     maxZoom: 19,
   });
   map.touchZoomRotate?.disableRotation?.();
-  // Alguns ícones de pontos de interesse não existem no estilo: usa uma imagem vazia (sem avisos)
+
   map.on('styleimagemissing', (e: any) => {
     try {
       if (e?.id && !map.hasImage(e.id)) map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
     } catch {
-      // ignora
     }
   });
   let loaded = false;
@@ -315,7 +279,6 @@ function vectorEngine(ml: any, el: HTMLDivElement, start: Region, hooks: Hooks, 
       try {
         fn();
       } catch {
-        // ignora
       }
     });
   });
@@ -352,7 +315,7 @@ function vectorEngine(ml: any, el: HTMLDivElement, start: Region, hooks: Hooks, 
         so = Math.min(so, c.latitude);
         n = Math.max(n, c.latitude);
       }
-      // margens nunca maiores do que o próprio mapa (senão o MapLibre ignora o pedido)
+
       const W = el.clientWidth || 360;
       const H = el.clientHeight || 640;
       const padding = {
@@ -403,7 +366,6 @@ function vectorEngine(ml: any, el: HTMLDivElement, start: Region, hooks: Hooks, 
             if (map.getLayer(id)) map.removeLayer(id);
             if (map.getSource(id)) map.removeSource(id);
           } catch {
-            // o mapa já foi removido
           }
         },
       };
@@ -415,10 +377,6 @@ function vectorEngine(ml: any, el: HTMLDivElement, start: Region, hooks: Hooks, 
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// OpenStreetMap (Leaflet): última reserva, sem WebGL
-// ---------------------------------------------------------------------------
 
 function ensureLeafletCss() {
   if (typeof document === 'undefined' || document.getElementById('leaflet-css')) return;
@@ -437,7 +395,7 @@ function leafletEngine(el: HTMLDivElement, start: Region, hooks: Hooks, dark = f
   const map = L.map(el, {
     zoomControl: false,
     attributionControl: true,
-    // zoom em números inteiros: as imagens do mapa ficam nítidas (sem esticar)
+
     zoomSnap: 1,
     zoomDelta: 1,
     wheelPxPerZoomLevel: 90,
@@ -454,7 +412,7 @@ function leafletEngine(el: HTMLDivElement, start: Region, hooks: Hooks, dark = f
     keepBuffer: 4,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   }).addTo(map);
-  // modo nocturno no OpenStreetMap: inverte as cores das imagens do mapa
+
   if (dark) {
     const pane = map.getPanes().tilePane;
     if (pane) pane.style.filter = 'invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9)';
@@ -501,10 +459,6 @@ function leafletEngine(el: HTMLDivElement, start: Region, hooks: Hooks, dark = f
   };
 }
 
-// ---------------------------------------------------------------------------
-// Componentes
-// ---------------------------------------------------------------------------
-
 const MapCtx = createContext<{ engine: Engine | null; version: number }>({ engine: null, version: 0 });
 
 type MapProps = {
@@ -515,7 +469,7 @@ type MapProps = {
   onPress?: (e: MapPressEvent) => void;
   onRegionChangeComplete?: (r: Region) => void;
   children?: React.ReactNode;
-  // Aceites por compatibilidade (só têm efeito no telemóvel)
+
   customMapStyle?: unknown;
   showsMyLocationButton?: boolean;
   showsBuildings?: boolean;
@@ -553,7 +507,6 @@ export default class MapView extends React.Component<MapProps, MapState> {
     press: (c) => this.props.onPress?.({ nativeEvent: { coordinate: c } }),
   };
 
-  /** Modo nocturno: o ecrã passa um estilo de mapa (customMapStyle). */
   private dark() {
     return Array.isArray(this.props.customMapStyle);
   }
@@ -563,7 +516,6 @@ export default class MapView extends React.Component<MapProps, MapState> {
     return ok(r) ? r : { latitude: -25.9692, longitude: 32.5732, latitudeDelta: 0.03, longitudeDelta: 0.03 };
   }
 
-  /** Motor activo (síncrono: o estado do React só actualiza depois). */
   private current: Engine | null = null;
   private fallingBack = false;
 
@@ -581,7 +533,6 @@ export default class MapView extends React.Component<MapProps, MapState> {
     });
   }
 
-  /** Sem Google: mapa vectorial OpenFreeMap; sem WebGL (ou se falhar): OpenStreetMap. */
   private async startFallback(region: Region) {
     if (webglOK()) {
       try {
@@ -624,7 +575,7 @@ export default class MapView extends React.Component<MapProps, MapState> {
         if (!this.alive || !this.el) return;
         authListeners.add(this.onAuthFail);
         this.use(googleEngine(g, this.el, this.startRegion(), this.hooks, this.props.customMapStyle));
-        if (googleAuthFailed) this.switchToFallback(); // a chave foi recusada entretanto
+        if (googleAuthFailed) this.switchToFallback();
         return;
       } catch (e) {
         console.warn('[mapa] Google Maps indisponível, a usar o mapa OpenFreeMap:', (e as Error)?.message);
@@ -644,13 +595,12 @@ export default class MapView extends React.Component<MapProps, MapState> {
   private apply(p: PendingView) {
     const e = this.state.engine;
     if (!e) {
-      this.pending = p; // o mapa ainda está a carregar: aplica quando estiver pronto
+      this.pending = p;
       return;
     }
     if (p.kind === 'region') e.flyTo(p.region, zoomFor(p.region.latitudeDelta), p.duration);
     else if (p.kind === 'camera') e.flyTo(p.center, p.zoom ?? e.zoom(), p.duration);
     else {
-      // Num ecrã baixo, limita a margem para o percurso nunca ficar sem espaço
       const bottom = Math.min(p.pad.bottom, Math.max(40, e.heightPx() * 0.6));
       e.fit(p.coords, { ...p.pad, bottom }, p.animate);
     }
@@ -672,7 +622,6 @@ export default class MapView extends React.Component<MapProps, MapState> {
   }
 
   animateCamera(camera: { center?: Coord; zoom?: number; pitch?: number; heading?: number }, opts?: { duration?: number }) {
-    // Na web não há inclinação 3D: segue o centro e o zoom
     if (ok(camera.center)) this.apply({ kind: 'camera', center: camera.center, zoom: camera.zoom, duration: opts?.duration ?? 500 });
   }
 
@@ -717,12 +666,11 @@ type MarkerProps = {
   rotation?: number;
   zIndex?: number;
   children?: React.ReactNode;
-  // Aceites por compatibilidade
+
   flat?: boolean;
   tracksViewChanges?: boolean;
 };
 
-/** Marcador: uma View posicionada por cima do mapa, na coordenada certa. */
 export function Marker({ coordinate, anchor, rotation = 0, zIndex = 0, children }: MarkerProps) {
   const { engine } = useContext(MapCtx);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -751,7 +699,6 @@ export function Marker({ coordinate, anchor, rotation = 0, zIndex = 0, children 
   );
 }
 
-/** Linha do percurso. */
 export function Polyline({
   coordinates,
   strokeWidth = 4,

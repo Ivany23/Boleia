@@ -6,10 +6,6 @@ import type { Category, LatLng } from '../types';
 import { toRN } from '../utils';
 import { CarTop } from './Vehicle';
 
-/**
- * Veículo no mapa: desliza entre posições e roda na direcção do movimento.
- * `flat` faz o carro "deitar" no mapa e acompanhar a rotação/inclinação 3D.
- */
 export function VehicleMarker({
   point,
   category,
@@ -19,7 +15,7 @@ export function VehicleMarker({
 }: {
   point: LatLng;
   category: Category;
-  /** Se dado, a posição/rumo já vêm suavizados de fora (não volta a animar). */
+
   heading?: number;
   size?: number;
   zIndex?: number;
@@ -27,7 +23,7 @@ export function VehicleMarker({
   const external = heading !== undefined;
   const smooth = useSmoothPoint(external ? null : point);
   const s = external ? { point, heading } : smooth;
-  // Desenha o bitmap do marcador só no início (desempenho no Android)
+
   const [track, setTrack] = useState(true);
   useEffect(() => {
     const t = setTimeout(() => setTrack(false), 1200);

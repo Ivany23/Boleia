@@ -12,19 +12,12 @@ import { saveProfile, type ThemePref } from './storage';
 import { isDark, shadow, theme } from './theme';
 import type { Profile } from './types';
 
-/**
- * Navegação da app:
- *  - com sessão guardada, abre directamente no ecrã do passageiro/motorista
- *    (não volta ao registo ao recarregar a página ou ao tocar em "voltar");
- *  - o botão do canto abre o menu: tema, trocar de papel, terminar sessão.
- */
 export function Root({ initialProfile, themePref }: { initialProfile: Profile | null; themePref: ThemePref }) {
   const [profile, setProfile] = useState<Profile | null>(initialProfile);
-  const [draft, setDraft] = useState<Partial<Profile> | null>(null); // dados para pré-preencher o registo
+  const [draft, setDraft] = useState<Partial<Profile> | null>(null);
   const [menu, setMenu] = useState(false);
   const connected = useConnected();
 
-  // Velocidade (site): começa já a carregar o Google Maps, mesmo no ecrã de registo
   useEffect(() => {
     preloadMap();
   }, []);
@@ -69,7 +62,6 @@ export function Root({ initialProfile, themePref }: { initialProfile: Profile | 
   );
 
   return Platform.OS === 'web' ? (
-    // No computador, a app aparece centrada com largura de telemóvel
     <View style={{ flex: 1, backgroundColor: isDark() ? '#0B110E' : '#DCEBE3', alignItems: 'center' }}>
       <View style={[{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: theme.bg, overflow: 'hidden' }, shadow(2)]}>
         {content}

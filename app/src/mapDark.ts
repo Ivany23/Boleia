@@ -1,4 +1,3 @@
-/** Estilo nocturno do Google Maps (telemóvel Android e site), em tons da marca. */
 export const darkMapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#1b2420' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#9aaaa2' }] },

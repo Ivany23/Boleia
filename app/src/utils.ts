@@ -14,7 +14,6 @@ export const PAYMENTS: { id: Payment; label: string; icon: 'cash' | 'phone'; not
   { id: 'emola', label: 'e-Mola', icon: 'phone', note: 'pagamento ao motorista' },
 ];
 
-/** Máximo de paragens pelo caminho (igual ao servidor). */
 export const MAX_STOPS = 3;
 
 export const categoryLabel = (c?: Category) => CATEGORIES.find((x) => x.id === c)?.label ?? '';
@@ -52,13 +51,11 @@ export const validPoint = (p: any): p is LatLng =>
 export const cleanPath = (pts: LatLng[] | undefined | null) =>
   Array.isArray(pts) ? pts.filter(validPoint) : [];
 
-/** "+25%" a partir de 1.25 */
 export const pct = (m: number | undefined) =>
   `+${Math.round(((Number.isFinite(m as number) ? (m as number) : 1) - 1) * 100)}%`;
 
 export type Tag = { key: string; icon: string; text: string; tone: 'night' | 'warn' | 'accent' | 'sand' };
 
-/** Etiquetas que explicam o preço ao passageiro e ao motorista. */
 export function priceTags(p: {
   period?: PricePeriod;
   traffic?: Traffic;
@@ -66,10 +63,12 @@ export function priceTags(p: {
   surface?: Surface | null;
   rain?: Rain | null;
   fewDrivers?: Category[];
-  /** categoria escolhida (para "poucos carros por perto") */
+  local?: boolean;
+
   category?: Category;
 }): Tag[] {
   const tags: Tag[] = [];
+  if (p.local) tags.push({ key: 'local', icon: 'location', text: 'Tarifa de bairro', tone: 'sand' });
   if (p.period && p.period.multiplier > 1) {
     tags.push({
       key: 'period',
@@ -91,11 +90,6 @@ export function priceTags(p: {
   return tags;
 }
 
-/**
- * Número de WhatsApp de Moçambique no formato +2588XXXXXXXX, ou null se inválido.
- * Aceita "84 123 4567", "+258 84 123 4567", "258841234567". Redes móveis 82–87.
- * (Igual à validação do servidor.)
- */
 export function normalizePhone(raw: string): string | null {
   let d = String(raw ?? '').replace(/\D/g, '');
   if (d.startsWith('00258')) d = d.slice(5);
@@ -103,7 +97,6 @@ export function normalizePhone(raw: string): string | null {
   return /^8[2-7]\d{7}$/.test(d) ? `+258${d}` : null;
 }
 
-/** "+258841234567" -> "84 123 4567" */
 export const formatPhone = (p: string) => {
   const d = p.replace(/^\+258/, '');
   return d.length === 9 ? `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` : p;

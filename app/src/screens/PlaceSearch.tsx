@@ -22,18 +22,18 @@ type Props = {
   onSelect: (p: Place) => void;
   onClose: () => void;
   onUseCurrent?: () => void;
-  /** Fecha a pesquisa e deixa marcar o local arrastando o mapa. */
+
   onPickOnMap?: () => void;
 };
 
 export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent, onPickOnMap }: Props) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
-  // Resultado da última pesquisa concluída (para a consulta `q`)
+
   const [result, setResult] = useState<{ q: string; items: Suggestion[]; error: string }>({ q: '', items: [], error: '' });
   const [pickError, setPickError] = useState('');
   const [picking, setPicking] = useState(false);
-  const session = useRef(newSession()); // one token per search session
+  const session = useRef(newSession());
   const reqId = useRef(0);
 
   const q = text.trim();

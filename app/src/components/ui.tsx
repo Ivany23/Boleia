@@ -18,7 +18,6 @@ type BtnProps = {
 
 const NATIVE = Platform.OS !== 'web';
 
-/** Escala suave ao tocar (mola), para todos os botões terem a mesma sensação. */
 export function usePressScale(to = 0.97) {
   const [v] = useState(() => new Animated.Value(1));
   const spring = (toValue: number) =>
@@ -63,7 +62,6 @@ export function Button({ title, onPress, variant = 'primary', disabled, style, i
   );
 }
 
-/** O "flex" do botão vai para o invólucro animado; o resto do estilo fica no botão. */
 const OUTER_KEYS = ['flex', 'alignSelf'];
 function flexOnly(style?: StyleProp<ViewStyle>): ViewStyle | null {
   const entries = Object.entries(StyleSheet.flatten(style) ?? {}).filter(([k]) => OUTER_KEYS.includes(k));
@@ -74,7 +72,6 @@ function withoutFlex(style?: StyleProp<ViewStyle>): ViewStyle | null {
   return Object.fromEntries(Object.entries(StyleSheet.flatten(style) ?? {}).filter(([k]) => !OUTER_KEYS.includes(k))) as ViewStyle;
 }
 
-/** Entrada suave (aparece e sobe um pouco) para conteúdos que mudam. */
 export function FadeIn({
   children,
   delay = 0,
@@ -100,10 +97,6 @@ export function FadeIn({
   return <Animated.View style={[{ opacity: v, transform: [{ translateY }] }, style]}>{children}</Animated.View>;
 }
 
-/**
- * Painel inferior com entrada animada. Se `summary` for dado, a pega permite
- * minimizar o painel para uma linha, deixando o mapa visível durante a viagem.
- */
 export function Sheet({
   children,
   style,
@@ -156,7 +149,6 @@ export function Sheet({
   );
 }
 
-/** Botão redondo flutuante sobre o mapa. */
 export function MapButton({
   icon,
   label,
@@ -191,7 +183,6 @@ export function MapButton({
   );
 }
 
-/** Barra de progresso da viagem. */
 export function ProgressBar({ value }: { value: number }) {
   const v = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
   return (
@@ -201,7 +192,6 @@ export function ProgressBar({ value }: { value: number }) {
   );
 }
 
-/** Etiqueta no mapa (ex.: "3 min" por cima do ponto de recolha). */
 export function MapPill({ text }: { text: string }) {
   return (
     <View style={{ alignItems: 'center' }}>
@@ -275,7 +265,6 @@ const TONES = {
   sand: { bg: theme.sandSoft, fg: theme.sand },
 };
 
-/** Etiquetas como "Tarifa nocturna +25%" ou "Trânsito intenso". */
 export function PriceTags({ tags }: { tags: Tag[] }) {
   if (!tags.length) return null;
   return (
@@ -290,13 +279,12 @@ export function PriceTags({ tags }: { tags: Tag[] }) {
   );
 }
 
-/** Detalhe transparente do preço: quanto é de quê, e quanto fica para o motorista. */
 export function FareDetails({ fare, perspective = 'passenger' }: { fare: Fare; perspective?: 'passenger' | 'driver' }) {
   const b = fare.breakdown;
   const rows: [string, number][] = [
     ['Tarifa base', b.base],
-    ['Distância (inclui combustível)', b.distance],
-    ['Tempo (inclui trânsito)', b.time],
+    ['Distância (combustível + desgaste + motorista)', b.distance],
+    ['Tempo parado no trânsito', b.time],
   ];
   if (b.pickup) rows.push(['Ida do motorista até si', b.pickup]);
   if (b.stops) rows.push(['Paragens pelo caminho', b.stops]);
@@ -334,7 +322,6 @@ export function FareDetails({ fare, perspective = 'passenger' }: { fare: Fare; p
   );
 }
 
-/** Botão redondo com contador opcional (ex.: mensagens por ler). */
 export function RoundButton({
   icon,
   label,
@@ -367,7 +354,6 @@ export function RoundButton({
   );
 }
 
-/** Círculo com as iniciais do nome. */
 export function Avatar({ name, size = 52 }: { name: string; size?: number }) {
   const initials =
     name

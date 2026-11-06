@@ -4,10 +4,6 @@ import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Re
 import type { Category } from '../types';
 import { categoryColors } from '../theme';
 
-// ---------------------------------------------------------------------------
-// Veículos 3D (Microsoft Fluent Emoji 3D, licença MIT: assets/vehicles/LICENSE.txt)
-// ---------------------------------------------------------------------------
-
 const IMAGES: Record<Category, ImageSourcePropType> = {
   moto: require('../../assets/vehicles/moto.png'),
   economico: require('../../assets/vehicles/economico.png'),
@@ -16,7 +12,6 @@ const IMAGES: Record<Category, ImageSourcePropType> = {
 
 const NATIVE = Platform.OS !== 'web';
 
-/** "Reduzir movimento" ligado no telemóvel/computador: sem animações contínuas. */
 function useReduceMotion() {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
@@ -33,10 +28,6 @@ function useReduceMotion() {
   return reduce;
 }
 
-/**
- * Veículo 3D a flutuar suavemente (sobe e desce, com a sombra no chão a
- * acompanhar). `active` levanta-o um pouco mais e aumenta-o (categoria escolhida).
- */
 export function Vehicle3D({
   category,
   size = 64,
@@ -48,7 +39,7 @@ export function Vehicle3D({
   size?: number;
   float?: boolean;
   active?: boolean;
-  /** desfasamento (ms) para vários veículos não flutuarem todos ao mesmo tempo */
+
   delay?: number;
 }) {
   const reduce = useReduceMotion();
@@ -117,7 +108,6 @@ export function Vehicle3D({
   );
 }
 
-/** Insígnia da categoria: veículo 3D (parado) num círculo da cor da categoria. */
 export function VehicleBadge({ category, size = 48 }: { category: Category; size?: number }) {
   const c = categoryColors(category);
   return (
@@ -136,21 +126,16 @@ export function VehicleBadge({ category, size = 48 }: { category: Category; size
   );
 }
 
-// ---------------------------------------------------------------------------
-// Veículos no mapa, vistos de cima (frente para cima), na cor da categoria.
-// O volume vem da sombra projectada, do gradiente lateral e dos reflexos.
-// ---------------------------------------------------------------------------
-
 const PALETTE: Record<Category, { light: string; mid: string; dark: string }> = {
-  moto: { light: '#FDBA8C', mid: '#EA580C', dark: '#9A3412' }, // laranja
-  economico: { light: '#FFE08A', mid: '#F2A60D', dark: '#A86A00' }, // âmbar (táxi)
-  conforto: { light: '#93C5FD', mid: '#2563EB', dark: '#1E3A8A' }, // azul
+  moto: { light: '#FDBA8C', mid: '#EA580C', dark: '#9A3412' },
+  economico: { light: '#FFE08A', mid: '#F2A60D', dark: '#A86A00' },
+  conforto: { light: '#93C5FD', mid: '#2563EB', dark: '#1E3A8A' },
 };
 
 export function CarTop({ category = 'economico', width = 26 }: { category?: Category; width?: number }) {
   if (category === 'moto') return <MotoTop width={width * 0.8} />;
   const c = PALETTE[category];
-  const id = category; // ids únicos por cor
+  const id = category;
   return (
     <Svg width={width} height={width * 1.8} viewBox="0 0 40 72">
       <Defs>
@@ -174,25 +159,25 @@ export function CarTop({ category = 'economico', width = 26 }: { category?: Cate
           <Stop offset="1" stopColor="#000" stopOpacity={0} />
         </RadialGradient>
       </Defs>
-      {/* sombra projectada (ligeiramente deslocada = sensação de altura) */}
+
       <Ellipse cx="22" cy="39" rx="19" ry="34" fill={`url(#shadow-${id})`} />
-      {/* espelhos */}
+
       <Rect x="1.5" y="22" width="5" height="4" rx="2" fill={c.dark} />
       <Rect x="33.5" y="22" width="5" height="4" rx="2" fill={c.dark} />
-      {/* carroçaria */}
+
       <Rect x="5" y="3" width="30" height="65" rx="11" fill={`url(#body-${id})`} />
-      {/* pára-brisas e vidro traseiro */}
+
       <Path d="M9 21 Q20 15 31 21 L29 29 Q20 26 11 29 Z" fill={`url(#glass-${id})`} />
       <Path d="M11 53 Q20 55.5 29 53 L30 59 Q20 62 10 59 Z" fill={`url(#glass-${id})`} />
-      {/* tejadilho com reflexo */}
+
       <Rect x="10.5" y="29.5" width="19" height="23" rx="5" fill={c.mid} />
       <Rect x="10.5" y="29.5" width="19" height="23" rx="5" fill={`url(#roof-${id})`} />
-      {/* faróis e farolins */}
+
       <Ellipse cx="11" cy="5.5" rx="3.2" ry="1.6" fill="#FFFBE6" />
       <Ellipse cx="29" cy="5.5" rx="3.2" ry="1.6" fill="#FFFBE6" />
       <Rect x="8" y="65" width="6" height="2" rx="1" fill="#E5484D" />
       <Rect x="26" y="65" width="6" height="2" rx="1" fill="#E5484D" />
-      {/* sinal de táxi no tejadilho */}
+
       {category === 'economico' && <Rect x="15" y="37.5" width="10" height="6" rx="1.5" fill="#1F2937" />}
       {category === 'economico' && <Rect x="17" y="39.5" width="6" height="2" rx="1" fill="#FFE08A" />}
     </Svg>
@@ -219,15 +204,15 @@ export function MotoTop({ width = 20 }: { width?: number }) {
         </LinearGradient>
       </Defs>
       <Ellipse cx="13" cy="25" rx="11" ry="22" fill="url(#mshadow)" />
-      {/* rodas */}
+
       <Rect x="9.5" y="2" width="5" height="10" rx="2.5" fill="#1B1F1D" />
       <Rect x="9.5" y="36" width="5" height="10" rx="2.5" fill="#1B1F1D" />
-      {/* guiador */}
+
       <Rect x="3" y="12" width="18" height="3" rx="1.5" fill="#2A302D" />
-      {/* corpo */}
+
       <Rect x="7.5" y="10" width="9" height="28" rx="4.5" fill="url(#mbody)" />
       <G>
-        {/* ombros do condutor + capacete */}
+
         <Ellipse cx="12" cy="25" rx="8" ry="5" fill="#1F2937" />
         <Circle cx="12" cy="22" r="5" fill="url(#helmet)" />
       </G>
@@ -235,4 +220,4 @@ export function MotoTop({ width = 20 }: { width?: number }) {
     </Svg>
   );
 }
-
+
