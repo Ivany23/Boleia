@@ -47,7 +47,7 @@ export default function App() {
   if (!boot) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A7A4B' }}>
-        <ActivityIndicator color="#FFC629" size="large" />
+        <ActivityIndicator color="#FFFFFF" size="large" />
       </View>
     );
   }
