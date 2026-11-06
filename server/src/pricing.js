@@ -6,8 +6,11 @@
  * 2. TARIFA:   base + km × porKm + min × porMin + ida até à recolha (custo real)
  * 3. GARANTIA: o motorista recebe sempre, no mínimo, o custo real + ganho mínimo
  *              por hora de trabalho (ida até à recolha + viagem), por categoria
- * 4. AJUSTE:   × multiplicador (horário × procura na zona × aprendizagem), 0,9 a 1,6,
- *              aplicado POR CIMA da garantia (a noite rende sempre mais)
+ * 4. AJUSTE:   × multiplicador (horário × procura/falta de carros × chuva × aprendizagem),
+ *              0,9 a 1,6, aplicado POR CIMA da garantia (a noite rende sempre mais)
+ * 6. CARRO PARADO: 3 min de espera grátis na recolha, depois por minuto; e, se a viagem
+ *              demorar muito mais do que o previsto (parado no trânsito), o tempo extra.
+ *              Estes extras vão inteiros para o motorista.
  * 5. PLATAFORMA: comissão PLATFORM_FEE somada por cima + taxa de serviço fixa SERVICE_FEE
  *
  *   total = arredonda5( max(líquido / (1 − comissão), mínimo × multiplicador) + taxa de serviço )
@@ -50,12 +53,22 @@ const PICKUP_KMH = 20;
  * desgaste: pneus, óleo, manutenção, depreciação (MZN/km).
  */
 export const CATEGORY_COSTS = {
-  moto: { consumo: 3.0, ralenti: 0.004, desgaste: 1.5, ganhoKm: 2.0, ganhoMin: 0.6, base: 20, minimo: 30 },
-  economico: { consumo: 7.5, ralenti: 0.012, desgaste: 3.5, ganhoKm: 3.0, ganhoMin: 1.2, base: 40, minimo: 70 },
-  conforto: { consumo: 9.5, ralenti: 0.015, desgaste: 5.0, ganhoKm: 6.0, ganhoMin: 1.8, base: 70, minimo: 110 },
+  moto: { consumo: 3.0, ralenti: 0.004, desgaste: 1.5, ganhoKm: 2.5, ganhoMin: 0.9, base: 20, minimo: 30, paragem: 10, areia: 0.3 },
+  economico: { consumo: 7.5, ralenti: 0.012, desgaste: 3.5, ganhoKm: 3.8, ganhoMin: 1.8, base: 35, minimo: 70, paragem: 15, areia: 0.6 },
+  conforto: { consumo: 9.5, ralenti: 0.015, desgaste: 5.0, ganhoKm: 6.0, ganhoMin: 2.4, base: 60, minimo: 110, paragem: 20, areia: 0.4 },
 };
+// paragem: valor fixo por paragem intermédia (MZN), além de STOP_WAIT_MIN minutos de espera.
+// areia: custo extra por km em estrada de areia/terra, em fracção do preço por km
+//        (mais combustível, embraiagem e suspensão; o carro baixo sofre mais do que o SUV).
+
+/** Minutos de espera incluídos em cada paragem intermédia. */
+export const STOP_WAIT_MIN = 3;
+/** Máximo de paragens intermédias por viagem. */
+export const MAX_STOPS = 3;
 export const CATEGORIES = Object.keys(CATEGORY_COSTS);
 export const PAYMENTS = ['dinheiro', 'mpesa', 'emola'];
+
+const round5 = (n) => Math.round(n / 5) * 5;
 
 export const MIN_MULTIPLIER = 0.9;
 export const MAX_MULTIPLIER = 1.6;
@@ -69,6 +82,8 @@ export function ratesFor(category, fuelPrice = FUEL.gasolina) {
   return {
     base: c.base,
     minimo: c.minimo,
+    paragem: c.paragem,
+    areia: c.areia,
     /** custo real por km (combustível + desgaste) */
     costKm: fuelKm + c.desgaste,
     /** custo real por minuto parado */
@@ -119,35 +134,102 @@ export function trafficLevel(durationSeconds, staticDurationSeconds) {
   return 'livre';
 }
 
-/** Procura instantânea: pedidos à espera vs. motoristas livres perto (1 a 1,3). */
-export function demandMultiplier(waiting, freeDrivers) {
-  if (!(waiting > 0) || !(freeDrivers > 0)) return 1;
-  const ratio = waiting / freeDrivers;
-  if (ratio <= 1) return 1;
-  return Math.min(1.3, Math.round((1 + (ratio - 1) * 0.1) * 100) / 100);
+/** Nenhum carro livre por perto: um pouco mais caro (atrai motoristas de longe). */
+export const SCARCITY_NONE = 1.15;
+/** Só um carro livre por perto. */
+export const SCARCITY_ONE = 1.05;
+export const MAX_DEMAND = 1.3;
+
+/**
+ * Procura instantânea na zona (1 a 1,3):
+ *  - pedidos à espera vs. motoristas livres perto (+10% por cada pedido a mais);
+ *  - falta de carros: nenhum livre ×1,15; só um ×1,05;
+ *  - pico de pedidos: pedidos dos últimos 15 min por carro livre; acima de 2 por
+ *    carro, +3% por cada pedido a mais (no máximo +15%).
+ */
+export function demandMultiplier(waiting, freeDrivers, recentRequests = 0) {
+  const wait = waiting > 0 ? waiting : 0;
+  const free = freeDrivers > 0 ? Math.floor(freeDrivers) : 0;
+  let m = 1;
+  if (free === 0) {
+    if (wait > 0) m = SCARCITY_NONE;
+  } else {
+    const ratio = wait / free;
+    if (ratio > 1) m = 1 + (ratio - 1) * 0.1;
+    if (free === 1 && wait > 0) m = Math.max(m, SCARCITY_ONE);
+  }
+  const perCar = (Number(recentRequests) || 0) / (free + 1);
+  if (perCar > 2) m *= 1 + Math.min(0.15, (perCar - 2) * 0.03);
+  return Math.min(MAX_DEMAND, Math.round(m * 100) / 100);
 }
 
-const round5 = (n) => Math.round(n / 5) * 5;
+// ---------------------------------------------------------------------------
+// Carro parado: espera na recolha e atrasos grandes no trânsito
+// ---------------------------------------------------------------------------
+
+/** Minutos de espera grátis depois de o motorista chegar à recolha. */
+export const FREE_WAIT_MIN = 3;
+/** A viagem só cobra tempo extra se demorar mais do que previsto × 1,25 + 5 min. */
+export const DELAY_FACTOR = 1.25;
+export const DELAY_GRACE_MIN = 5;
+/** Máximo de minutos extra cobrados (espera ou atraso), por segurança. */
+export const MAX_EXTRA_MIN = 60;
+
+/** MZN por minuto parado: combustível ao ralenti + ganho mínimo por hora do motorista. */
+export function waitRatePerMin(category, fuelPrice) {
+  const r = ratesFor(category, fuelPrice);
+  return Math.round((r.costMin + driverMinHourlyFor(category) / 60) * 100) / 100;
+}
+
+/** Valor (múltiplo de 5) de N minutos parado; 0 se não houver minutos a cobrar. */
+export function extraCharge(category, minutes) {
+  const m = Math.min(MAX_EXTRA_MIN, Math.max(0, Math.ceil(Number(minutes) || 0)));
+  return m > 0 ? Math.max(5, round5(m * waitRatePerMin(category))) : 0;
+}
+
+/** Minutos de atraso a cobrar numa viagem (0 se dentro do previsto + tolerância). */
+export function delayMinutes(estimatedSeconds, actualMinutes) {
+  const est = Math.max(0, Number(estimatedSeconds) || 0) / 60;
+  const allowed = est * DELAY_FACTOR + DELAY_GRACE_MIN;
+  return Math.max(0, (Number(actualMinutes) || 0) - allowed);
+}
+
+/** Junta um extra (todo para o motorista) a uma tarifa; a repartição continua a bater certo. */
+export function addExtra(fare, kind, amount) {
+  if (!fare || !(amount > 0)) return fare;
+  return {
+    ...fare,
+    total: fare.total + amount,
+    driverEarnings: fare.driverEarnings + amount,
+    breakdown: { ...fare.breakdown, [kind]: (fare.breakdown?.[kind] ?? 0) + amount },
+  };
+}
+
 const clampM = (m) => Math.min(MAX_MULTIPLIER, Math.max(MIN_MULTIPLIER, Number.isFinite(m) ? m : 1));
 
 /**
  * Tarifa completa de uma categoria.
  * @param opts.multiplier   horário × procura × aprendizagem (limitado a 0,9–1,6)
  * @param opts.pickupMeters distância estimada do motorista até à recolha
+ * @param opts.stops        número de paragens intermédias (0 a MAX_STOPS)
+ * @param opts.sandMeters   metros do percurso em estrada de areia/terra
  * @returns {{ total, driverEarnings, platformFee, multiplier, driverCost,
- *   breakdown: { base, distance, time, pickup, surcharge, guarantee, serviceFee } }}
+ *   breakdown: { base, distance, time, pickup, stops, sand, surcharge, guarantee, serviceFee } }}
  */
 export function fareFor(
   category,
   distanceMeters,
   durationSeconds,
-  { multiplier = 1, fuelPrice, pickupMeters = DEFAULT_PICKUP_M } = {},
+  { multiplier = 1, fuelPrice, pickupMeters = DEFAULT_PICKUP_M, stops = 0, sandMeters = 0 } = {},
 ) {
   const r = ratesFor(category, fuelPrice);
   const km = Math.max(0, Number(distanceMeters) || 0) / 1000;
   const min = Math.max(0, Number(durationSeconds) || 0) / 60;
   const pickupKm = Math.max(0, Number.isFinite(pickupMeters) ? pickupMeters : DEFAULT_PICKUP_M) / 1000;
   const m = clampM(Number(multiplier));
+  const nStops = Math.min(MAX_STOPS, Math.max(0, Math.floor(Number(stops) || 0)));
+  const sandKm = Math.min(km, Math.max(0, Number(sandMeters) || 0) / 1000);
+  const stopMin = nStops * STOP_WAIT_MIN;
 
   // 2. tarifa
   const raw = {
@@ -155,12 +237,15 @@ export function fareFor(
     distance: km * r.porKm,
     time: min * r.porMin,
     pickup: Math.min(pickupKm, MAX_PAID_PICKUP_KM) * r.costKm,
+    stops: nStops * r.paragem + stopMin * r.porMin,
+    sand: sandKm * r.porKm * r.areia,
   };
-  const tariff = raw.base + raw.distance + raw.time + raw.pickup;
+  const tariff = raw.base + raw.distance + raw.time + raw.pickup + raw.stops + raw.sand;
 
-  // 3. garantia: custo real + lucro mínimo por hora de trabalho (ida + viagem)
-  const engagedMin = min + (pickupKm / PICKUP_KMH) * 60;
-  const driverCost = (km + pickupKm) * r.costKm + min * r.costMin;
+  // 3. garantia: custo real + lucro mínimo por hora de trabalho (ida + viagem + paragens)
+  const engagedMin = min + stopMin + (pickupKm / PICKUP_KMH) * 60;
+  const driverCost =
+    (km + pickupKm) * r.costKm + (min + stopMin) * r.costMin + sandKm * r.costKm * r.areia;
   const floorNet = driverCost + (driverMinHourlyFor(category) / 60) * engagedMin;
   const guaranteed = Math.max(tariff, floorNet);
   const guarantee = guaranteed - tariff;
@@ -184,6 +269,8 @@ export function fareFor(
     distance: Math.round(parts.distance * k),
     time: Math.round(parts.time * k),
     pickup: Math.round(parts.pickup * k),
+    stops: Math.round(parts.stops * k),
+    sand: Math.round(parts.sand * k),
     surcharge: Math.round(parts.surcharge * k), // negativo quando há desconto
     guarantee: Math.round(parts.guarantee * k),
     serviceFee: round5(SERVICE_FEE),
@@ -210,20 +297,49 @@ export function priceFor(category, distanceMeters, durationSeconds, opts) {
  * demand(category)   -> multiplicador de procura na zona (≥ 1)
  * learning(category) -> factor aprendido com o histórico (0,9 a 1,2)
  * pickup(category)   -> metros do motorista livre mais próximo (ou null)
+ * stops              -> número de paragens intermédias
+ * sandMeters         -> metros do percurso em areia/terra (0 se desconhecido)
+ * rain               -> multiplicador da chuva (1 sem chuva)
+ *
+ * Se a rota veio SEM trânsito (route.trafficAware === false, ex.: a Google recusou o
+ * trânsito) e é hora de ponta, o tempo é estimado com +30% (o carro fica mais parado).
  */
-export function priceRoute(route, { date = new Date(), demand = () => 1, learning = () => 1, pickup = () => null } = {}) {
+export const PEAK_NO_TRAFFIC_FACTOR = 1.3;
+
+export function priceRoute(
+  route,
+  {
+    date = new Date(),
+    demand = () => 1,
+    learning = () => 1,
+    pickup = () => null,
+    stops = 0,
+    sandMeters = 0,
+    rain = 1,
+  } = {},
+) {
   const period = periodAt(date);
+  const rainM = Math.max(1, Number(rain) || 1);
+  const peak = period.id === 'ponta_manha' || period.id === 'ponta_tarde';
+  const seconds =
+    route.trafficAware === false && peak ? route.durationSeconds * PEAK_NO_TRAFFIC_FACTOR : route.durationSeconds;
   const fares = {};
   const prices = {};
+  const fewDrivers = [];
+  const waitRates = {};
   let demandMax = 1;
   for (const c of CATEGORIES) {
     const dm = Math.max(1, Number(demand(c)) || 1);
     const lf = Number(learning(c)) || 1;
     demandMax = Math.max(demandMax, dm);
     const p = pickup(c);
-    fares[c] = fareFor(c, route.distanceMeters, route.durationSeconds, {
-      multiplier: period.multiplier * dm * lf,
+    if (!Number.isFinite(p)) fewDrivers.push(c);
+    waitRates[c] = waitRatePerMin(c);
+    fares[c] = fareFor(c, route.distanceMeters, seconds, {
+      multiplier: period.multiplier * dm * lf * rainM,
       pickupMeters: Number.isFinite(p) ? p : DEFAULT_PICKUP_M,
+      stops,
+      sandMeters,
     });
     prices[c] = fares[c].total;
   }
@@ -232,7 +348,12 @@ export function priceRoute(route, { date = new Date(), demand = () => 1, learnin
     fares,
     period: { id: period.id, label: period.label, multiplier: period.multiplier },
     highDemand: demandMax > 1,
-    traffic: trafficLevel(route.durationSeconds, route.staticDurationSeconds),
+    fewDrivers,
+    rain: rainM > 1 ? { multiplier: rainM } : null,
+    waitRates,
+    freeWaitMin: FREE_WAIT_MIN,
+    traffic:
+      route.trafficAware === false && peak ? 'moderado' : trafficLevel(route.durationSeconds, route.staticDurationSeconds),
   };
 }
 
@@ -249,13 +370,26 @@ export function pricingInfo(date = new Date()) {
     fuel: { ...FUEL },
     platformFee: PLATFORM_FEE,
     serviceFee: SERVICE_FEE,
+    maxStops: MAX_STOPS,
+    freeWaitMin: FREE_WAIT_MIN,
+    waitRates: Object.fromEntries(CATEGORIES.map((c) => [c, waitRatePerMin(c)])),
     driverMinHourly: DRIVER_MIN_HOURLY,
     driverMinHourlyByCategory: Object.fromEntries(CATEGORIES.map((c) => [c, Math.round(driverMinHourlyFor(c))])),
     period: { id: p.id, label: p.label, multiplier: p.multiplier },
     rates: Object.fromEntries(
       CATEGORIES.map((c) => {
         const r = ratesFor(c);
-        return [c, { base: r.base, minimo: r.minimo, porKm: +r.porKm.toFixed(2), porMin: +r.porMin.toFixed(2) }];
+        return [
+          c,
+          {
+            base: r.base,
+            minimo: r.minimo,
+            porKm: +r.porKm.toFixed(2),
+            porMin: +r.porMin.toFixed(2),
+            paragem: +(r.paragem + STOP_WAIT_MIN * r.porMin).toFixed(2),
+            areiaPorKm: +(r.porKm * r.areia).toFixed(2),
+          },
+        ];
       }),
     ),
   };

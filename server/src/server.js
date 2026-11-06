@@ -4,15 +4,19 @@ import cors from 'cors';
 import { Server } from 'socket.io';
 import { createGoogle, HttpError } from './google.js';
 import { createMarket } from './market.js';
-import { pricingInfo } from './pricing.js';
+import { MAX_STOPS, pricingInfo } from './pricing.js';
 import { createQuoteService } from './quotes.js';
-import { createRideService, validLatLng } from './rides.js';
+import { createRideService, validLatLng, validStops } from './rides.js';
+import { createSurface } from './surface.js';
+import { createWeather } from './weather.js';
 
 const num = (v) => (v === undefined || v === '' ? NaN : Number(v));
 
 export function createServer({
   google,
   route,
+  surface,
+  weather,
   market,
   repo,
   clock = () => new Date(),
@@ -21,8 +25,19 @@ export function createServer({
 } = {}) {
   const g = google ?? createGoogle();
   const mk = market ?? createMarket({ clock });
+  // Estradas de areia (dados do OpenStreetMap no servidor): com as rotas reais do Google.
+  // Com uma rota de teste injectada fica desligado, a não ser que o teste passe o seu `surface`.
+  const sf = surface !== undefined ? surface : route ? null : createSurface();
+  if (sf?.segments) setImmediate(() => sf.segments()); // carrega o índice já, não na 1.ª cotação
+  // Chuva (Open-Meteo): igual, só com as rotas reais
+  const wx = weather !== undefined ? weather : route ? null : createWeather();
+  wx?.refresh?.().catch(() => {});
+  const weatherTimer = wx?.refresh ? setInterval(() => wx.refresh().catch(() => {}), 10 * 60 * 1000) : null;
+  weatherTimer?.unref?.();
   const quotes = createQuoteService({
     route: route ?? g.route,
+    surface: sf,
+    weather: wx,
     clock,
     demand: (category, point) => rides.demand(category, point),
     learning: (category, point) => rides.learning(category, point),
@@ -114,11 +129,14 @@ h1{margin:0 0 6px;color:#0A7A4B}p{margin:6px 0;color:#5F6F66}b{color:#0E1B14}a{c
   app.post(
     '/api/quote',
     h((req) => {
-      const { origin, destination } = req.body ?? {};
+      const { origin, destination, stops } = req.body ?? {};
       if (!validLatLng(origin) || !validLatLng(destination)) {
         throw new HttpError(400, 'Origem e destino inválidos.');
       }
-      return quotes.quote(origin, destination);
+      if (stops != null && !validStops(stops)) {
+        throw new HttpError(400, `Paragens inválidas (no máximo ${MAX_STOPS}).`);
+      }
+      return quotes.quote(origin, destination, stops ?? []);
     }),
   );
 
@@ -154,6 +172,7 @@ h1{margin:0 0 6px;color:#0A7A4B}p{margin:6px 0;color:#5F6F66}b{color:#0E1B14}a{c
     async close() {
       clearInterval(nearbyTimer);
       clearInterval(sweepTimer);
+      if (weatherTimer) clearInterval(weatherTimer);
       rides.shutdown();
       await io.close();
       if (httpServer.listening) await new Promise((r) => httpServer.close(r));

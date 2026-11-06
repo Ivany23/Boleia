@@ -38,7 +38,28 @@ export type Fare = {
     guarantee?: number;
     /** taxa de serviço fixa da plataforma */
     serviceFee?: number;
+    /** paragens intermédias (valor fixo + minutos de espera) */
+    stops?: number;
+    /** troços em estrada de areia/terra */
+    sand?: number;
+    /** espera na recolha depois dos minutos grátis (todo para o motorista) */
+    waiting?: number;
+    /** tempo extra parado no trânsito, muito acima do previsto (todo para o motorista) */
+    delay?: number;
   };
+};
+
+/** Chuva no momento da cotação (sobe um pouco o preço). */
+export type Rain = { level: 'fraca' | 'forte'; multiplier: number };
+
+/** Estradas de areia/terra no percurso (dados do OpenStreetMap). */
+export type Surface = {
+  sandMeters: number;
+  sandRatio: number;
+  /** a recolha fica numa rua de areia */
+  pickupSand: boolean;
+  /** o destino fica numa rua de areia */
+  dropoffSand: boolean;
 };
 
 export type PeriodId = 'normal' | 'ponta_manha' | 'ponta_tarde' | 'noite';
@@ -52,6 +73,17 @@ export type Ride = {
   passengerName: string;
   pickup: Place;
   dropoff: Place;
+  /** Paragens pelo caminho, pela ordem. */
+  stops?: Place[];
+  surface?: Surface | null;
+  rain?: Rain | null;
+  /** minutos de espera grátis na recolha e preço por minuto depois disso */
+  freeWaitMin?: number;
+  waitRatePerMin?: number;
+  /** quando o motorista chegou (ms, relógio do servidor) */
+  arrivedAt?: number;
+  extraWaitMin?: number;
+  extraDelayMin?: number;
   category: Category;
   payment: Payment;
   /** Nota do passageiro para o motorista (ex.: "portão azul"). */
@@ -80,6 +112,13 @@ export type Quote = {
   polyline: LatLng[];
   prices: Record<Category, number>;
   fares?: Record<Category, Fare>;
+  stops?: LatLng[];
+  surface?: Surface | null;
+  rain?: Rain | null;
+  /** categorias sem nenhum carro livre por perto (preço um pouco mais alto) */
+  fewDrivers?: Category[];
+  freeWaitMin?: number;
+  waitRates?: Record<Category, number>;
   period?: PricePeriod;
   traffic?: Traffic;
   highDemand?: boolean;
@@ -91,11 +130,11 @@ export type RideOffer = {
 };
 export type AckResult = { ok: true; ride: Ride } | { ok: false; error: string };
 
-
 export type PricingInfo = {
   fuel: { gasolina: number; gasoleo: number; fonte: string };
   platformFee: number;
   serviceFee?: number;
+  maxStops?: number;
   /** lucro mínimo garantido ao motorista por hora de trabalho (MZN) */
   driverMinHourly?: number;
   period: PricePeriod;

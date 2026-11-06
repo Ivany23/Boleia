@@ -11,14 +11,14 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { Logo } from '../components/Logo';
-import { Button, common } from '../components/ui';
-import { CarTop, VehicleBadge } from '../components/Vehicle';
+import { Button, FadeIn, common } from '../components/ui';
+import { Vehicle3D } from '../components/Vehicle';
 import { Icon } from '../components/Icon';
 import { tap } from '../haptics';
 import { getPermission } from '../location';
-import { shadow, theme } from '../theme';
+import { categoryColors, shadow, theme } from '../theme';
 import type { Category, Profile } from '../types';
 import { CATEGORIES, formatPhone, normalizePhone } from '../utils';
 
@@ -68,9 +68,16 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
         contentContainerStyle={{ paddingBottom: insets.bottom + 24, gap: 18 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Cabeçalho verde com estrada amarela e carro */}
+        {/* Cabeçalho: gradiente verde → azul, estrada amarela e a frota 3D a flutuar */}
         <View style={[styles.hero, { paddingTop: insets.top + 20 }]}>
           <Svg style={StyleSheet.absoluteFill} viewBox="0 0 400 260" preserveAspectRatio="none">
+            <Defs>
+              <LinearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor={theme.heroFrom} />
+                <Stop offset="1" stopColor={theme.heroTo} />
+              </LinearGradient>
+            </Defs>
+            <Rect x="0" y="0" width="400" height="260" fill="url(#hero)" />
             <Path d="M-20 230 C 90 170, 170 250, 260 170 S 380 90, 430 60" stroke={theme.accent} strokeWidth={26} fill="none" opacity={0.95} />
             <Path
               d="M-20 230 C 90 170, 170 250, 260 170 S 380 90, 430 60"
@@ -83,8 +90,10 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
           </Svg>
           <Logo size={42} light />
           <Text style={styles.tagline}>A sua boleia em Maputo e Matola.{'\n'}Preço justo, sem surpresas.</Text>
-          <View style={styles.heroCar}>
-            <CarTop category="economico" width={22} />
+          <View style={styles.heroFleet}>
+            {CATEGORIES.map((c, i) => (
+              <Vehicle3D key={c.id} category={c.id} size={i === 1 ? 84 : 66} delay={i * 450} />
+            ))}
           </View>
         </View>
 
@@ -95,14 +104,22 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
               subtitle="Pedir uma boleia"
               active={!isDriver}
               onPress={() => setRole('passenger')}
-              icon={<Icon name="person" size={26} color={!isDriver ? '#fff' : theme.ink} />}
+              icon={
+                <View style={[styles.roleIcon, { backgroundColor: !isDriver ? 'rgba(255,255,255,0.18)' : theme.infoSoft }]}>
+                  <Icon name="person" size={24} color={!isDriver ? '#fff' : theme.info} />
+                </View>
+              }
             />
             <RoleCard
               title="Motorista"
               subtitle="Ganhar a conduzir"
               active={isDriver}
               onPress={() => setRole('driver')}
-              icon={<VehicleBadge category="economico" size={44} />}
+              icon={
+                <View style={[styles.roleIcon, { backgroundColor: isDriver ? 'rgba(255,255,255,0.18)' : theme.accentSoft }]}>
+                  <Icon name="taxi" size={24} color={isDriver ? '#fff' : theme.accentDark} />
+                </View>
+              }
             />
           </View>
 
@@ -151,21 +168,27 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
                   placeholderTextColor={theme.muted}
                 />
                 <Text style={styles.label}>Categoria</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {CATEGORIES.map((c) => (
-                    <Pressable
-                      key={c.id}
-                      onPress={() => {
-                        tap();
-                        setCategory(c.id);
-                      }}
-                      style={[styles.chip, category === c.id && styles.chipOn]}
-                    >
-                      <VehicleBadge category={c.id} size={40} />
-                      <Text style={[styles.chipText, category === c.id && { color: theme.primaryDark }]}>{c.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
+                <FadeIn style={{ flexDirection: 'row', gap: 8 }}>
+                  {CATEGORIES.map((c, i) => {
+                    const on = category === c.id;
+                    const col = categoryColors(c.id);
+                    return (
+                      <Pressable
+                        key={c.id}
+                        onPress={() => {
+                          tap();
+                          setCategory(c.id);
+                        }}
+                        style={[styles.chip, on && { borderColor: col.fg, backgroundColor: col.soft }]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: on }}
+                      >
+                        <Vehicle3D category={c.id} size={56} active={on} delay={i * 400} />
+                        <Text style={[styles.chipText, on && { color: col.fg }]}>{c.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </FadeIn>
               </>
             )}
           </View>
@@ -241,16 +264,17 @@ function RoleCard({
 
 const styles = StyleSheet.create({
   hero: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.heroFrom,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
     paddingHorizontal: 22,
-    paddingBottom: 70,
+    paddingBottom: 18,
     gap: 12,
     overflow: 'hidden',
   },
-  tagline: { color: '#E1F3E9', fontSize: 15, lineHeight: 22, fontWeight: '500' },
-  heroCar: { position: 'absolute', right: 70, bottom: 58, transform: [{ rotate: '-62deg' }] },
+  tagline: { color: '#E6F6EE', fontSize: 15, lineHeight: 22, fontWeight: '500' },
+  heroFleet: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: 6, marginTop: 6 },
+  roleIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   role: {
     flex: 1,
     minHeight: 104,
@@ -282,15 +306,15 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderRadius: 12, backgroundColor: theme.bg, paddingHorizontal: 14, fontSize: 15, color: theme.ink },
   chip: {
     flex: 1,
-    minHeight: 84,
+    minHeight: 92,
     borderRadius: 16,
     backgroundColor: theme.bg,
     borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 2,
+    paddingBottom: 6,
   },
-  chipOn: { borderColor: theme.primary, backgroundColor: theme.primarySoft },
   chipText: { fontSize: 13, fontWeight: '600', color: theme.ink },
 });

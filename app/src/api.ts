@@ -65,12 +65,11 @@ export async function placeDetails(placeId: string, session: string): Promise<Pl
   return { ...p, address: p.address || 'Local seleccionado' };
 }
 
-export async function getQuote(origin: LatLng, destination: LatLng): Promise<Quote> {
-  const q = await request<Quote>(
-    '/api/quote',
-    { method: 'POST', body: JSON.stringify({ origin, destination }) },
-    15000,
-  );
+export async function getQuote(origin: LatLng, destination: LatLng, stops: LatLng[] = []): Promise<Quote> {
+  const pt = (p: LatLng) => ({ lat: p.lat, lng: p.lng });
+  const body: Record<string, unknown> = { origin: pt(origin), destination: pt(destination) };
+  if (stops.length) body.stops = stops.map(pt);
+  const q = await request<Quote>('/api/quote', { method: 'POST', body: JSON.stringify(body) }, 15000);
   if (!q || !q.prices) throw new ApiError('Resposta inválida do servidor.');
   return { ...q, polyline: Array.isArray(q.polyline) ? q.polyline : [] };
 }

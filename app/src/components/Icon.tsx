@@ -1,13 +1,62 @@
+/**
+ * Ícones da Boleia: conjunto Lucide (https://lucide.dev, licença ISC), todos no
+ * mesmo padrão: grelha 24×24, traço de 2 px, pontas e cantos arredondados.
+ * Gerado a partir dos SVG oficiais (lucide-static 1.70.0) para os traços serem exactos.
+ */
 import React from 'react';
-import Svg, { Circle, Path, Line, Polyline, Rect } from 'react-native-svg';
+import Svg, { G, Circle, Line, Path, Polygon, Rect } from 'react-native-svg';
 
 export type IconName =
-  | 'person' | 'car' | 'search' | 'location' | 'flag' | 'moon'
-  | 'sun' | 'clock' | 'menu' | 'my-location' | 'compass' | 'expand'
-  | 'navigate' | 'note' | 'map' | 'pin' | 'swap' | 'logout'
-  | 'close' | 'check' | 'star' | 'star-outline' | 'alert'
-  | 'motorcycle' | 'back' | 'ban' | 'sad' | 'celebrate'
-  | 'fuel' | 'traffic' | 'bolt' | 'pencil';
+  | 'person'
+  | 'car'
+  | 'search'
+  | 'location'
+  | 'flag'
+  | 'moon'
+  | 'sun'
+  | 'clock'
+  | 'menu'
+  | 'my-location'
+  | 'compass'
+  | 'expand'
+  | 'navigate'
+  | 'note'
+  | 'map'
+  | 'pin'
+  | 'swap'
+  | 'logout'
+  | 'close'
+  | 'check'
+  | 'star'
+  | 'star-outline'
+  | 'alert'
+  | 'motorcycle'
+  | 'back'
+  | 'ban'
+  | 'sad'
+  | 'celebrate'
+  | 'fuel'
+  | 'traffic'
+  | 'bolt'
+  | 'pencil'
+  | 'plus'
+  | 'trash'
+  | 'stop'
+  | 'route'
+  | 'cash'
+  | 'phone'
+  | 'info'
+  | 'shield'
+  | 'sand'
+  | 'chevron-up'
+  | 'chevron-down'
+  | 'check-circle'
+  | 'wallet'
+  | 'taxi'
+  | 'palette'
+  | 'circle-dot'
+  | 'rain'
+  | 'timer';
 
 type Props = {
   name: IconName;
@@ -16,344 +65,126 @@ type Props = {
   strokeWidth?: number;
 };
 
-const commonProps = (color: string, sw: number) => ({
-  stroke: color,
-  strokeWidth: sw,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-  fill: 'none' as const,
-});
+function shapes(name: IconName) {
+  switch (name) {
+    case 'person': // lucide: user
+      return <><Path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><Circle cx="12" cy="7" r="4" /></>;
+    case 'car': // lucide: car-front
+      return <><Path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8" /><Path d="M7 14h.01" /><Path d="M17 14h.01" /><Rect width="18" height="8" x="3" y="10" rx="2" /><Path d="M5 18v2" /><Path d="M19 18v2" /></>;
+    case 'search': // lucide: search
+      return <><Path d="m21 21-4.34-4.34" /><Circle cx="11" cy="11" r="8" /></>;
+    case 'location': // lucide: map-pin
+      return <><Path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><Circle cx="12" cy="10" r="3" /></>;
+    case 'flag': // lucide: flag
+      return <Path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528" />;
+    case 'moon': // lucide: moon
+      return <Path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />;
+    case 'sun': // lucide: sun
+      return <><Circle cx="12" cy="12" r="4" /><Path d="M12 2v2" /><Path d="M12 20v2" /><Path d="m4.93 4.93 1.41 1.41" /><Path d="m17.66 17.66 1.41 1.41" /><Path d="M2 12h2" /><Path d="M20 12h2" /><Path d="m6.34 17.66-1.41 1.41" /><Path d="m19.07 4.93-1.41 1.41" /></>;
+    case 'clock': // lucide: clock
+      return <><Circle cx="12" cy="12" r="10" /><Path d="M12 6v6l4 2" /></>;
+    case 'menu': // lucide: menu
+      return <><Path d="M4 5h16" /><Path d="M4 12h16" /><Path d="M4 19h16" /></>;
+    case 'my-location': // lucide: locate-fixed
+      return <><Line  /><Line  /><Line  /><Line  /><Circle cx="12" cy="12" r="7" /><Circle cx="12" cy="12" r="3" /></>;
+    case 'compass': // lucide: compass
+      return <><Circle cx="12" cy="12" r="10" /><Path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" /></>;
+    case 'expand': // lucide: maximize-2
+      return <><Path d="M15 3h6v6" /><Path d="m21 3-7 7" /><Path d="m3 21 7-7" /><Path d="M9 21H3v-6" /></>;
+    case 'navigate': // lucide: navigation
+      return <Polygon points="3 11 22 2 13 21 11 13 3 11" />;
+    case 'note': // lucide: sticky-note
+      return <><Path d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" /><Path d="M15 3v5a1 1 0 0 0 1 1h5" /></>;
+    case 'map': // lucide: map
+      return <><Path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" /><Path d="M15 5.764v15" /><Path d="M9 3.236v15" /></>;
+    case 'pin': // lucide: map-pin
+      return <><Path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" /><Circle cx="12" cy="10" r="3" /></>;
+    case 'swap': // lucide: arrow-left-right
+      return <><Path d="M8 3 4 7l4 4" /><Path d="M4 7h16" /><Path d="m16 21 4-4-4-4" /><Path d="M20 17H4" /></>;
+    case 'logout': // lucide: log-out
+      return <><Path d="m16 17 5-5-5-5" /><Path d="M21 12H9" /><Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /></>;
+    case 'close': // lucide: x
+      return <><Path d="M18 6 6 18" /><Path d="m6 6 12 12" /></>;
+    case 'check': // lucide: check
+      return <Path d="M20 6 9 17l-5-5" />;
+    case 'star': // lucide: star
+      return <Path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />;
+    case 'star-outline': // lucide: star
+      return <Path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" />;
+    case 'alert': // lucide: triangle-alert
+      return <><Path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><Path d="M12 9v4" /><Path d="M12 17h.01" /></>;
+    case 'motorcycle': // lucide: motorbike
+      return <><Path d="m18 14-1-3" /><Path d="m3 9 6 2a2 2 0 0 1 2-2h2a2 2 0 0 1 1.99 1.81" /><Path d="M8 17h3a1 1 0 0 0 1-1 6 6 0 0 1 6-6 1 1 0 0 0 1-1v-.75A5 5 0 0 0 17 5" /><Circle cx="19" cy="17" r="3" /><Circle cx="5" cy="17" r="3" /></>;
+    case 'back': // lucide: chevron-left
+      return <Path d="m15 18-6-6 6-6" />;
+    case 'ban': // lucide: ban
+      return <><Circle cx="12" cy="12" r="10" /><Path d="M4.929 4.929 19.07 19.071" /></>;
+    case 'sad': // lucide: frown
+      return <><Path d="M15 10V9" /><Path d="M9 10V9" /><Path d="M9 16a5 5 0 016 0" /><Circle cx="12" cy="12" r="10" /></>;
+    case 'celebrate': // lucide: sparkles
+      return <><Path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><Path d="M20 2v4" /><Path d="M22 4h-4" /><Circle cx="4" cy="20" r="2" /></>;
+    case 'fuel': // lucide: fuel
+      return <><Path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5" /><Path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16" /><Path d="M2 21h13" /><Path d="M3 9h11" /></>;
+    case 'traffic': // lucide: traffic-cone
+      return <><Path d="M16.05 10.966a5 2.5 0 0 1-8.1 0" /><Path d="m16.923 14.049 4.48 2.04a1 1 0 0 1 .001 1.831l-8.574 3.9a2 2 0 0 1-1.66 0l-8.574-3.91a1 1 0 0 1 0-1.83l4.484-2.04" /><Path d="M16.949 14.14a5 2.5 0 1 1-9.9 0L10.063 3.5a2 2 0 0 1 3.874 0z" /><Path d="M9.194 6.57a5 2.5 0 0 0 5.61 0" /></>;
+    case 'bolt': // lucide: zap
+      return <Path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z" />;
+    case 'pencil': // lucide: pencil
+      return <><Path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><Path d="m15 5 4 4" /></>;
+    case 'plus': // lucide: plus
+      return <><Path d="M5 12h14" /><Path d="M12 5v14" /></>;
+    case 'trash': // lucide: trash-2
+      return <><Path d="M10 11v6" /><Path d="M14 11v6" /><Path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><Path d="M3 6h18" /><Path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></>;
+    case 'stop': // lucide: map-pin-plus
+      return <><Path d="M19.914 11.105A7.298 7.298 0 0 0 20 10a8 8 0 0 0-16 0c0 4.993 5.539 10.193 7.399 11.799a1 1 0 0 0 1.202 0 32 32 0 0 0 .824-.738" /><Circle cx="12" cy="10" r="3" /><Path d="M16 18h6" /><Path d="M19 15v6" /></>;
+    case 'route': // lucide: route
+      return <><Circle cx="6" cy="19" r="3" /><Path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" /><Circle cx="18" cy="5" r="3" /></>;
+    case 'cash': // lucide: banknote
+      return <><Rect width="20" height="12" x="2" y="6" rx="2" /><Circle cx="12" cy="12" r="2" /><Path d="M6 12h.01M18 12h.01" /></>;
+    case 'phone': // lucide: smartphone
+      return <><Rect width="14" height="20" x="5" y="2" rx="2" ry="2" /><Path d="M12 18h.01" /></>;
+    case 'info': // lucide: info
+      return <><Circle cx="12" cy="12" r="10" /><Path d="M12 16v-4" /><Path d="M12 8h.01" /></>;
+    case 'shield': // lucide: shield-check
+      return <><Path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /><Path d="m9 12 2 2 4-4" /></>;
+    case 'sand': // lucide: mountain
+      return <Path d="m8 3 4 8 5-5 5 15H2L8 3z" />;
+    case 'chevron-up': // lucide: chevron-up
+      return <Path d="m18 15-6-6-6 6" />;
+    case 'chevron-down': // lucide: chevron-down
+      return <Path d="m6 9 6 6 6-6" />;
+    case 'check-circle': // lucide: circle-check
+      return <><Circle cx="12" cy="12" r="10" /><Path d="m16 9-5.5 5.5L8 12" /></>;
+    case 'wallet': // lucide: wallet
+      return <><Path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1" /><Path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4" /></>;
+    case 'taxi': // lucide: car-taxi-front
+      return <><Path d="M10 2h4" /><Path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8" /><Path d="M7 14h.01" /><Path d="M17 14h.01" /><Rect width="18" height="8" x="3" y="10" rx="2" /><Path d="M5 18v2" /><Path d="M19 18v2" /></>;
+    case 'palette': // lucide: palette
+      return <><Path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" /><Circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><Circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><Circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><Circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /></>;
+    case 'circle-dot': // lucide: circle-dot
+      return <><Circle cx="12" cy="12" r="1" /><Circle cx="12" cy="12" r="10" /></>;
+    case 'rain': // lucide: cloud-rain
+      return <><Path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><Path d="M16 14v6" /><Path d="M8 14v6" /><Path d="M12 16v6" /></>;
+    case 'timer': // lucide: timer
+      return <><Line  /><Line  /><Circle cx="12" cy="14" r="8" /></>;
+    default:
+      return null;
+  }
+}
 
-export function Icon({ name, size = 20, color = '#3A4740', strokeWidth = 1.8 }: Props) {
-  const cp = commonProps(color, strokeWidth);
-
-  const renderIcon = () => {
-    switch (name) {
-      /* ── person ─────────────────────────────────────── */
-      case 'person':
-        return (
-          <>
-            <Circle cx={12} cy={7} r={3.5} {...cp} />
-            <Path d="M5.5 21a6.5 6.5 0 0 1 13 0" {...cp} />
-          </>
-        );
-
-      /* ── car ────────────────────────────────────────── */
-      case 'car':
-        return (
-          <>
-            <Path d="M5 17h14v-4l-2-5H7L5 13v4z" {...cp} />
-            <Circle cx={8} cy={17} r={1.5} {...cp} />
-            <Circle cx={16} cy={17} r={1.5} {...cp} />
-            <Line x1={5} y1={13} x2={19} y2={13} {...cp} />
-          </>
-        );
-
-      /* ── search ─────────────────────────────────────── */
-      case 'search':
-        return (
-          <>
-            <Circle cx={11} cy={11} r={6} {...cp} />
-            <Line x1={16.25} y1={16.25} x2={20} y2={20} {...cp} />
-          </>
-        );
-
-      /* ── location (teardrop pin with inner circle) ──── */
-      case 'location':
-        return (
-          <>
-            <Path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" {...cp} />
-            <Circle cx={12} cy={9} r={2.5} {...cp} />
-          </>
-        );
-
-      /* ── flag ───────────────────────────────────────── */
-      case 'flag':
-        return (
-          <>
-            <Line x1={5} y1={4} x2={5} y2={21} {...cp} />
-            <Path d="M5 4h11l-3 4 3 4H5" {...cp} />
-          </>
-        );
-
-      /* ── moon ───────────────────────────────────────── */
-      case 'moon':
-        return (
-          <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" {...cp} />
-        );
-
-      /* ── sun ────────────────────────────────────────── */
-      case 'sun':
-        return (
-          <>
-            <Circle cx={12} cy={12} r={4} {...cp} />
-            <Line x1={12} y1={2} x2={12} y2={4.5} {...cp} />
-            <Line x1={12} y1={19.5} x2={12} y2={22} {...cp} />
-            <Line x1={4.22} y1={4.22} x2={5.99} y2={5.99} {...cp} />
-            <Line x1={18.01} y1={18.01} x2={19.78} y2={19.78} {...cp} />
-            <Line x1={2} y1={12} x2={4.5} y2={12} {...cp} />
-            <Line x1={19.5} y1={12} x2={22} y2={12} {...cp} />
-            <Line x1={4.22} y1={19.78} x2={5.99} y2={18.01} {...cp} />
-            <Line x1={18.01} y1={5.99} x2={19.78} y2={4.22} {...cp} />
-          </>
-        );
-
-      /* ── clock ──────────────────────────────────────── */
-      case 'clock':
-        return (
-          <>
-            <Circle cx={12} cy={12} r={9} {...cp} />
-            <Polyline points="12 6 12 12 16 14" {...cp} />
-          </>
-        );
-
-      /* ── menu (hamburger) ───────────────────────────── */
-      case 'menu':
-        return (
-          <>
-            <Line x1={4} y1={6} x2={20} y2={6} {...cp} />
-            <Line x1={4} y1={12} x2={20} y2={12} {...cp} />
-            <Line x1={4} y1={18} x2={20} y2={18} {...cp} />
-          </>
-        );
-
-      /* ── my-location (crosshair) ────────────────────── */
-      case 'my-location':
-        return (
-          <>
-            <Circle cx={12} cy={12} r={4} {...cp} />
-            <Circle cx={12} cy={12} r={8} {...cp} />
-            <Line x1={12} y1={2} x2={12} y2={4} {...cp} />
-            <Line x1={12} y1={20} x2={12} y2={22} {...cp} />
-            <Line x1={2} y1={12} x2={4} y2={12} {...cp} />
-            <Line x1={20} y1={12} x2={22} y2={12} {...cp} />
-          </>
-        );
-
-      /* ── compass ────────────────────────────────────── */
-      case 'compass':
-        return (
-          <>
-            <Circle cx={12} cy={12} r={9} {...cp} />
-            <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z" {...cp} />
-          </>
-        );
-
-      /* ── expand ─────────────────────────────────────── */
-      case 'expand':
-        return (
-          <>
-            <Polyline points="15 3 21 3 21 9" {...cp} />
-            <Polyline points="9 21 3 21 3 15" {...cp} />
-            <Line x1={21} y1={3} x2={14} y2={10} {...cp} />
-            <Line x1={3} y1={21} x2={10} y2={14} {...cp} />
-          </>
-        );
-
-      /* ── navigate (direction arrow) ─────────────────── */
-      case 'navigate':
-        return (
-          <Path d="M3 11l19-9-9 19-2-8-8-2z" {...cp} />
-        );
-
-      /* ── note ───────────────────────────────────────── */
-      case 'note':
-        return (
-          <>
-            <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" {...cp} />
-            <Polyline points="14 2 14 8 20 8" {...cp} />
-            <Line x1={8} y1={13} x2={16} y2={13} {...cp} />
-            <Line x1={8} y1={17} x2={13} y2={17} {...cp} />
-          </>
-        );
-
-      /* ── map ────────────────────────────────────────── */
-      case 'map':
-        return (
-          <>
-            <Path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" {...cp} />
-            <Line x1={8} y1={2} x2={8} y2={18} {...cp} />
-            <Line x1={16} y1={6} x2={16} y2={22} {...cp} />
-          </>
-        );
-
-      /* ── pin ────────────────────────────────────────── */
-      case 'pin':
-        return (
-          <>
-            <Path d="M12 2C9.24 2 7 4.24 7 7c0 4.5 5 11 5 11s5-6.5 5-11c0-2.76-2.24-5-5-5z" {...cp} />
-            <Circle cx={12} cy={7} r={1.5} {...cp} />
-          </>
-        );
-
-      /* ── swap ───────────────────────────────────────── */
-      case 'swap':
-        return (
-          <>
-            <Polyline points="17 1 21 5 17 9" {...cp} />
-            <Line x1={3} y1={5} x2={21} y2={5} {...cp} />
-            <Polyline points="7 23 3 19 7 15" {...cp} />
-            <Line x1={21} y1={19} x2={3} y2={19} {...cp} />
-          </>
-        );
-
-      /* ── logout ─────────────────────────────────────── */
-      case 'logout':
-        return (
-          <>
-            <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" {...cp} />
-            <Polyline points="16 17 21 12 16 7" {...cp} />
-            <Line x1={21} y1={12} x2={9} y2={12} {...cp} />
-          </>
-        );
-
-      /* ── close (X) ──────────────────────────────────── */
-      case 'close':
-        return (
-          <>
-            <Line x1={18} y1={6} x2={6} y2={18} {...cp} />
-            <Line x1={6} y1={6} x2={18} y2={18} {...cp} />
-          </>
-        );
-
-      /* ── check ──────────────────────────────────────── */
-      case 'check':
-        return (
-          <Polyline points="4 12 9 17 20 6" {...cp} />
-        );
-
-      /* ── star (filled) ──────────────────────────────── */
-      case 'star':
-        return (
-          <Path
-            d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill={color}
-          />
-        );
-
-      /* ── star-outline ───────────────────────────────── */
-      case 'star-outline':
-        return (
-          <Path
-            d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"
-            {...cp}
-          />
-        );
-
-      /* ── alert ──────────────────────────────────────── */
-      case 'alert':
-        return (
-          <>
-            <Path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" {...cp} />
-            <Line x1={12} y1={9} x2={12} y2={13} {...cp} />
-            <Circle cx={12} cy={16.5} r={0.5} stroke={color} strokeWidth={strokeWidth} fill={color} />
-          </>
-        );
-
-      /* ── motorcycle ─────────────────────────────────── */
-      case 'motorcycle':
-        return (
-          <>
-            <Circle cx={5.5} cy={17} r={3} {...cp} />
-            <Circle cx={18.5} cy={17} r={3} {...cp} />
-            <Path d="M5.5 17l3-7h4l3.5 3H19" {...cp} />
-            <Path d="M12.5 10l1.5-3h3" {...cp} />
-            <Line x1={8.5} y1={10} x2={14} y2={10} {...cp} />
-          </>
-        );
-
-      /* ── back (left chevron) ────────────────────────── */
-      case 'back':
-        return (
-          <Polyline points="15 18 9 12 15 6" {...cp} />
-        );
-
-      /* ── ban ────────────────────────────────────────── */
-      case 'ban':
-        return (
-          <>
-            <Circle cx={12} cy={12} r={9} {...cp} />
-            <Line x1={5.7} y1={5.7} x2={18.3} y2={18.3} {...cp} />
-          </>
-        );
-
-      /* ── sad ────────────────────────────────────────── */
-      case 'sad':
-        return (
-          <>
-            <Circle cx={12} cy={12} r={9} {...cp} />
-            <Circle cx={9} cy={10} r={0.75} stroke={color} strokeWidth={strokeWidth} fill={color} />
-            <Circle cx={15} cy={10} r={0.75} stroke={color} strokeWidth={strokeWidth} fill={color} />
-            <Path d="M8 16c1.33-1.33 2.67-2 4-2s2.67.67 4 2" {...cp} />
-          </>
-        );
-
-      /* ── celebrate (sparkle) ────────────────────────── */
-      case 'celebrate':
-        return (
-          <>
-            <Path d="M12 2v4" {...cp} />
-            <Path d="M12 18v4" {...cp} />
-            <Path d="M4.93 4.93l2.83 2.83" {...cp} />
-            <Path d="M16.24 16.24l2.83 2.83" {...cp} />
-            <Path d="M2 12h4" {...cp} />
-            <Path d="M18 12h4" {...cp} />
-            <Path d="M4.93 19.07l2.83-2.83" {...cp} />
-            <Path d="M16.24 7.76l2.83-2.83" {...cp} />
-            <Circle cx={12} cy={12} r={2} {...cp} />
-          </>
-        );
-
-      /* ── fuel ───────────────────────────────────────── */
-      case 'fuel':
-        return (
-          <>
-            <Rect x={4} y={4} width={10} height={16} rx={1} {...cp} />
-            <Path d="M14 10h2a2 2 0 0 1 2 2v4a1 1 0 0 0 2 0V8l-2-2" {...cp} />
-            <Line x1={7} y1={4} x2={7} y2={10} {...cp} />
-            <Line x1={11} y1={4} x2={11} y2={10} {...cp} />
-            <Line x1={7} y1={7} x2={11} y2={7} {...cp} />
-          </>
-        );
-
-      /* ── traffic ────────────────────────────────────── */
-      case 'traffic':
-        return (
-          <>
-            <Rect x={7} y={2} width={10} height={20} rx={2} {...cp} />
-            <Circle cx={12} cy={7} r={1.5} {...cp} />
-            <Circle cx={12} cy={12} r={1.5} {...cp} />
-            <Circle cx={12} cy={17} r={1.5} {...cp} />
-          </>
-        );
-
-      /* ── bolt (lightning) ───────────────────────────── */
-      case 'bolt':
-        return (
-          <Path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" {...cp} />
-        );
-
-      /* ── pencil ─────────────────────────────────────── */
-      case 'pencil':
-        return (
-          <>
-            <Path d="M17 3a2.83 2.83 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" {...cp} />
-            <Line x1={15} y1={5} x2={19} y2={9} {...cp} />
-          </>
-        );
-
-      default:
-        return null;
-    }
-  };
-
+export const Icon = React.memo(function Icon({ name, size = 20, color = '#334155', strokeWidth = 2 }: Props) {
+  const filled = ["star"].includes(name);
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
-      {renderIcon()}
+      <G
+        fill={filled ? color : 'none'}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {shapes(name)}
+      </G>
     </Svg>
   );
-}
+});

@@ -52,7 +52,7 @@ GROUP BY d.name, d.phone, d.rating ORDER BY ganhos DESC;
 ## 3. Chave do Google Maps para o site (5 minutos)
 > **Protótipo:** sem esta chave, o servidor entrega ao site a chave do servidor (`GOOGLE_ROUTES_API_KEY`), que fica **visível** no browser. Foi uma decisão consciente para a demonstração. Riscos e correcção em [SEGURANCA.md](SEGURANCA.md). Para desligar este modo: `MAPS_DEMO_USE_SERVER_KEY=0` no Render.
 
-Com `MAPS_DEMO_USE_SERVER_KEY=0` e sem esta chave, o site mostra o **OpenStreetMap**. Esta chave fica visível no site, por isso **tem de ser uma chave nova e limitada**. Nunca use a chave do servidor (`GOOGLE_ROUTES_API_KEY`).
+Com `MAPS_DEMO_USE_SERVER_KEY=0` e sem esta chave, o site mostra o mapa **OpenFreeMap** (gratuito, sem chave). Esta chave fica visível no site, por isso **tem de ser uma chave nova e limitada**. Nunca use a chave do servidor (`GOOGLE_ROUTES_API_KEY`).
 1. Abrir https://console.cloud.google.com/apis/credentials, no mesmo projecto das outras chaves.
 2. **Criar credenciais → Chave de API**.
 3. Em **Restrições da aplicação**, escolher **Referenciadores HTTP (sites)** e acrescentar:
@@ -62,7 +62,7 @@ Com `MAPS_DEMO_USE_SERVER_KEY=0` e sem esta chave, o site mostra o **OpenStreetM
 5. Pôr a chave **no Render** como `GOOGLE_MAPS_WEB_KEY` (o site vai buscá-la ao servidor; não é preciso refazer o deploy na Vercel).
    Alternativa: na Vercel como `EXPO_PUBLIC_GOOGLE_MAPS_KEY` + **Redeploy**.
 
-Se a chave falhar, o site passa sozinho para o OpenStreetMap e continua a funcionar.
+Se a chave falhar (por exemplo, a "Maps JavaScript API" não está activada na Google Cloud), o site passa sozinho para o mapa OpenFreeMap e continua a funcionar. O OpenStreetMap simples só aparece em browsers sem WebGL.
 
 ## 4. App na Vercel
 
@@ -75,7 +75,7 @@ Se a chave falhar, o site passa sozinho para o OpenStreetMap e continua a funcio
 > Se mudar o endereço do servidor, altere a variável e faça **Redeploy**: o endereço fica gravado na app no momento do build.
 
 ### A versão web
-- Mapa: Google Maps (com a chave do site) ou, como reserva, OpenStreetMap. Tudo o resto é igual: preços, "Escolher no mapa", cancelamento e avaliações.
+- Mapa: Google Maps (com a chave do site) ou, como reserva, OpenFreeMap (mapa vectorial moderno). Tudo o resto é igual: preços, "Escolher no mapa", cancelamento e avaliações.
 - Sem inclinação 3D na web; os carros continuam a deslizar e a rodar.
 - O browser pede autorização de localização (só funciona em `https`, que a Vercel já dá).
 

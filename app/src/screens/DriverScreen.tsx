@@ -16,6 +16,7 @@ import {
   Sheet,
   common,
 } from '../components/ui';
+import { Vehicle3D } from '../components/Vehicle';
 import { VehicleMarker } from '../components/VehicleMarker';
 import { ViewMarker } from '../components/ViewMarker';
 import { notify } from '../haptics';
@@ -23,12 +24,13 @@ import { bearing, useSmoothPoint } from '../motion';
 import { currentPosition } from '../location';
 import { getSocket } from '../socket';
 import { darkMapStyle } from '../mapDark';
-import { isDark, theme } from '../theme';
+import { categoryColors, isDark, theme } from '../theme';
 import { Icon } from '../components/Icon';
-import type { LatLng, PricingInfo, Profile, Ride, RideOffer } from '../types';
+import type { LatLng, Place, PricingInfo, Profile, Ride, RideOffer } from '../types';
 import {
   MAPUTO,
   PAYMENTS,
+  clockTime,
   categoryLabel,
   cleanPath,
   formatDistance,
@@ -269,7 +271,9 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
     if (!r) return;
     const t = r.status === 'in_progress' ? r.dropoff : r.pickup;
     if (!validPoint(t)) return;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${t.lat},${t.lng}&travelmode=driving`;
+    let url = `https://www.google.com/maps/dir/?api=1&destination=${t.lat},${t.lng}&travelmode=driving`;
+    const via = r.status === 'in_progress' ? (r.stops ?? []).filter(validPoint) : [];
+    if (via.length) url += `&waypoints=${encodeURIComponent(via.map((p) => `${p.lat},${p.lng}`).join('|'))}`;
     Linking.openURL(url).catch(() => setNotice('Não foi possível abrir a navegação.'));
   }
 
@@ -341,6 +345,12 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
             <Pin color={theme.primary} />
           </ViewMarker>
         )}
+        {ride &&
+          (ride.stops ?? []).filter(validPoint).map((p, i) => (
+            <ViewMarker key={`s${i}`} point={p} dep={`s${i}-${p.lat}-${p.lng}`}>
+              <Pin color={theme.violet} label={String(i + 1)} />
+            </ViewMarker>
+          ))}
         {ride && validPoint(ride.dropoff) && (
           <ViewMarker point={ride.dropoff} dep="d">
             <Pin color={theme.accentDark} />
@@ -389,9 +399,15 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
               accessibilityLabel="Ficar online"
             />
           </View>
-          <Text style={common.muted}>
-            {profile.car} · {profile.plate} · {categoryLabel(profile.category)}
-          </Text>
+          <View style={[styles.myCar, { backgroundColor: categoryColors(category).soft }]}>
+            <Vehicle3D category={category} size={52} float={online} />
+            <View style={{ flex: 1 }}>
+              <Text style={common.h2} numberOfLines={1}>{profile.car}</Text>
+              <Text style={common.muted} numberOfLines={1}>
+                {profile.plate} · {categoryLabel(profile.category)}
+              </Text>
+            </View>
+          </View>
 
           {pricing && period && (
             <View style={[styles.period, period.multiplier > 1 ? styles.periodHot : null]}>
@@ -457,10 +473,19 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
               <Text style={[common.body, { flex: 1 }]}>{ride.note}</Text>
             </View>
           ) : null}
-          <View style={{ gap: 4 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="location" size={14} color={theme.primary} /><Text style={[common.body, { flex: 1 }]} numberOfLines={1}>{ride.pickup?.address}</Text></View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="flag" size={14} color={theme.accentDark} /><Text style={[common.body, { flex: 1 }]} numberOfLines={1}>{ride.dropoff?.address}</Text></View>
-          </View>
+          <Addresses ride={ride} lines={1} />
+          <SandNote ride={ride} />
+          {ride.status === 'arrived' && ride.waitRatePerMin ? (
+            <View style={styles.wait}>
+              <Icon name="timer" size={16} color={theme.warn} />
+              <Text style={[common.body, { flex: 1, fontSize: 13 }]}>
+                {ride.arrivedAt
+                  ? `Espera grátis até às ${clockTime(ride.arrivedAt + (ride.freeWaitMin ?? 3) * 60000)}; `
+                  : ''}
+                depois recebe {money(ride.waitRatePerMin)} por minuto.
+              </Text>
+            </View>
+          ) : null}
           <Text style={common.muted}>
             Cobrar ao passageiro: {money(ride.price)} · {formatDistance(ride.distanceMeters)}
           </Text>
@@ -535,10 +560,8 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
                   {formatDistance(offer?.pickupDistanceMeters)} até à recolha · viagem de {formatDistance(offerRide.distanceMeters)} (
                   {formatDuration(offerRide.durationSeconds)})
                 </Text>
-                <View style={{ gap: 4 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="location" size={14} color={theme.primary} /><Text style={[common.body, { flex: 1 }]} numberOfLines={2}>{offerRide.pickup?.address}</Text></View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="flag" size={14} color={theme.accentDark} /><Text style={[common.body, { flex: 1 }]} numberOfLines={2}>{offerRide.dropoff?.address}</Text></View>
-                </View>
+                <Addresses ride={offerRide} lines={2} />
+                <SandNote ride={offerRide} />
                 {offerRide.note ? (
                   <View style={styles.note}>
                     <Icon name="note" size={16} color={theme.muted} />
@@ -569,6 +592,40 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
   );
 }
 
+/** Recolha, paragens (pela ordem) e destino. */
+function Addresses({ ride, lines }: { ride: Ride; lines: number }) {
+  const row = (key: string, icon: 'location' | 'stop' | 'flag', color: string, text: string) => (
+    <View key={key} style={styles.addrRow}>
+      <Icon name={icon} size={14} color={color} />
+      <Text style={[common.body, { flex: 1 }]} numberOfLines={lines}>{text}</Text>
+    </View>
+  );
+  const stops: Place[] = ride.stops ?? [];
+  return (
+    <View style={{ gap: 4 }}>
+      {row('p', 'location', theme.primary, ride.pickup?.address ?? '')}
+      {stops.map((p, i) => row(`s${i}`, 'stop', theme.violet, `Paragem ${i + 1}: ${p.address}`))}
+      {row('d', 'flag', theme.accentDark, ride.dropoff?.address ?? '')}
+    </View>
+  );
+}
+
+/** Aviso ao motorista: recolha/destino ou troços em estrada de areia. */
+function SandNote({ ride }: { ride: Ride }) {
+  const s = ride.surface;
+  if (!s || !(s.sandMeters >= 50 || s.pickupSand || s.dropoffSand)) return null;
+  const where = [s.pickupSand ? 'recolha' : '', s.dropoffSand ? 'destino' : ''].filter(Boolean).join(' e ');
+  return (
+    <View style={styles.sand}>
+      <Icon name="sand" size={16} color={theme.sand} />
+      <Text style={[common.body, { flex: 1, fontSize: 13 }]}>
+        {where ? `Atenção: ${where} em rua de areia. ` : ''}
+        {s.sandMeters >= 50 ? `Cerca de ${formatDistance(s.sandMeters)} em areia (já pago no preço).` : ''}
+      </Text>
+    </View>
+  );
+}
+
 function driverTitle(ride: Ride) {
   if (ride.status === 'accepted') return 'A caminho do passageiro';
   if (ride.status === 'arrived') return 'À espera do passageiro';
@@ -581,16 +638,20 @@ const styles = StyleSheet.create({
   mapTools: { position: 'absolute', right: 16, gap: 10 },
   navBtn: { minHeight: 40, paddingHorizontal: 14, borderWidth: 1.5, borderColor: theme.primary },
   note: { flexDirection: 'row', gap: 8, backgroundColor: theme.accentSoft, borderRadius: 12, padding: 10 },
+  sand: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: theme.sandSoft, borderRadius: 12, padding: 10 },
+  wait: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: theme.warnSoft, borderRadius: 12, padding: 10 },
+  addrRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  myCar: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4 },
   liveDot: { width: 10, height: 10, borderRadius: 5 },
   period: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: theme.bg, borderRadius: 16, padding: 12 },
   periodHot: { backgroundColor: theme.warnSoft },
   periodTitle: { fontSize: 15, fontWeight: '800', color: theme.ink },
-  earn: { backgroundColor: theme.primarySoft, borderRadius: 16, padding: 14 },
+  earn: { backgroundColor: theme.primarySoft, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: theme.primary + '22' },
   paxCard: { backgroundColor: theme.bg, borderRadius: 16, padding: 12 },
   bigPrice: { fontSize: 36, fontWeight: '900', color: theme.primary, textAlign: 'center' },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   offer: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, gap: 10 },
   offerEarn: { backgroundColor: theme.primary, borderRadius: 18, padding: 16, alignItems: 'center', gap: 2 },
   offerEarnValue: { color: '#fff', fontSize: 36, fontWeight: '900' },
-  count: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
+  count: { width: 48, height: 48, borderRadius: 24, backgroundColor: theme.accentSoft, borderWidth: 3, borderColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
 });

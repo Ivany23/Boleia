@@ -6,7 +6,7 @@ import { normalizePhone } from './utils';
 /**
  * Guardado no telemóvel / browser (nunca no servidor):
  *  - a sessão (nome, WhatsApp, papel, carro): para não voltar ao registo;
- *  - a preferência de tema (claro / escuro / automático).
+ *  - a preferência de tema (claro / escuro / automático). Por omissão: CLARO.
  */
 const PROFILE_KEY = 'boleia.profile.v1';
 const THEME_KEY = 'boleia.theme.v1';
@@ -41,19 +41,19 @@ export async function saveProfile(p: Profile | null) {
   }
 }
 
+/** Tema guardado; sem escolha feita, a app abre SEMPRE em modo claro. */
 export async function loadThemePref(): Promise<ThemePref> {
   try {
     const v = await AsyncStorage.getItem(THEME_KEY);
-    return v === 'light' || v === 'dark' ? v : 'auto';
+    return v === 'light' || v === 'dark' || v === 'auto' ? v : 'light';
   } catch {
-    return 'auto';
+    return 'light';
   }
 }
 
 export async function saveThemePref(v: ThemePref) {
   try {
-    if (v === 'auto') await AsyncStorage.removeItem(THEME_KEY);
-    else await AsyncStorage.setItem(THEME_KEY, v);
+    await AsyncStorage.setItem(THEME_KEY, v);
   } catch {
     // ignora
   }

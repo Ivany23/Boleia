@@ -21,7 +21,7 @@ Servidor Node.js (Express + Socket.IO) da app Boleia (Maputo/Matola). O contrato
 | GET | `/api/health` | `{ ok, drivers }` |
 | GET | `/api/places/autocomplete?input=&lat=&lng=&session=` | sugestões de locais (mín. 2 caracteres) |
 | GET | `/api/places/details?placeId=&session=` | `{ lat, lng, address }` |
-| POST | `/api/quote` | `{ origin, destination }` devolve `quoteId` (preço garantido 5 min), distância, duração com e sem trânsito, polyline, preços e repartição (`fares`) por categoria, horário e trânsito |
+| POST | `/api/quote` | `{ origin, destination, stops? }` devolve `quoteId` (preço garantido 5 min), distância, duração com e sem trânsito, polyline, preços e repartição (`fares`) por categoria, horário e trânsito |
 | GET | `/api/pricing` | preço dos combustíveis, comissão, horário em vigor e tarifas por categoria |
 
 Erros: `{ "error": "mensagem em português" }`.
@@ -36,6 +36,8 @@ Mesma porta. Eventos cliente para servidor: `passenger:hello`, `driver:online`, 
 - `src/server.js`: Express + Socket.IO
 - `src/google.js`: Places, Routes (com trânsito e recuo automático), descodificador de polyline, cache de 5 min
 - `src/pricing.js`: motor de preços (combustível ARENE, horários de Maputo, procura, comissão)
-- `src/quotes.js`: cotações com preço garantido
+- `src/quotes.js`: cotações com preço garantido (com paragens)
+- `src/surface.js` + `src/data/sand-maputo.json`: estradas de areia da Grande Maputo (OpenStreetMap, ODbL). Actualizar: `node scripts/build-sand-data.mjs`. Desligar: `SURFACE_CHECK=0`
+- `src/weather.js`: chuva em Maputo (Open-Meteo, sem chave), ajusta o preço. Desligar: `WEATHER_CHECK=0`
 - `src/rides.js`: estado em memória, atribuição e avaliações
 - `src/geo.js`: distância Haversine

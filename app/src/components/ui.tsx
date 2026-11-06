@@ -13,9 +13,20 @@ type BtnProps = {
   variant?: 'primary' | 'accent' | 'ghost' | 'danger';
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  icon?: IconName;
 };
 
-export function Button({ title, onPress, variant = 'primary', disabled, style }: BtnProps) {
+const NATIVE = Platform.OS !== 'web';
+
+/** Escala suave ao tocar (mola), para todos os botões terem a mesma sensação. */
+export function usePressScale(to = 0.97) {
+  const [v] = useState(() => new Animated.Value(1));
+  const spring = (toValue: number) =>
+    Animated.spring(v, { toValue, friction: 7, tension: 260, useNativeDriver: NATIVE }).start();
+  return { scale: v, onPressIn: () => spring(to), onPressOut: () => spring(1) };
+}
+
+export function Button({ title, onPress, variant = 'primary', disabled, style, icon }: BtnProps) {
   const bg = {
     primary: theme.primary,
     accent: theme.primary,
@@ -23,24 +34,70 @@ export function Button({ title, onPress, variant = 'primary', disabled, style }:
     danger: theme.dangerSoft,
   }[variant];
   const color = { primary: '#fff', accent: '#fff', ghost: theme.primary, danger: theme.danger }[variant];
+  const press = usePressScale();
   return (
-    <Pressable
-      onPress={() => {
-        tap();
-        onPress();
-      }}
-      disabled={disabled}
-      accessibilityRole="button"
-      style={({ pressed }) => [
-        styles.btn,
-        { backgroundColor: bg, opacity: disabled ? 0.45 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-        variant === 'primary' || variant === 'accent' ? shadow(1) : null,
-        style,
-      ]}
-    >
-      <Text style={[styles.btnText, { color }]}>{title}</Text>
-    </Pressable>
+    <Animated.View style={[{ transform: [{ scale: press.scale }] }, flexOnly(style)]}>
+      <Pressable
+        onPress={() => {
+          tap();
+          onPress();
+        }}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !!disabled }}
+        style={[
+          styles.btn,
+          { backgroundColor: bg, opacity: disabled ? 0.45 : 1 },
+          variant === 'primary' || variant === 'accent' ? shadow(1) : null,
+          withoutFlex(style),
+        ]}
+      >
+        {icon ? <Icon name={icon} size={18} color={color} /> : null}
+        <Text style={[styles.btnText, { color }]} numberOfLines={1}>
+          {title}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
+}
+
+/** O "flex" do botão vai para o invólucro animado; o resto do estilo fica no botão. */
+const OUTER_KEYS = ['flex', 'alignSelf'];
+function flexOnly(style?: StyleProp<ViewStyle>): ViewStyle | null {
+  const entries = Object.entries(StyleSheet.flatten(style) ?? {}).filter(([k]) => OUTER_KEYS.includes(k));
+  return entries.length ? (Object.fromEntries(entries) as ViewStyle) : null;
+}
+function withoutFlex(style?: StyleProp<ViewStyle>): ViewStyle | null {
+  if (!style) return null;
+  return Object.fromEntries(Object.entries(StyleSheet.flatten(style) ?? {}).filter(([k]) => !OUTER_KEYS.includes(k))) as ViewStyle;
+}
+
+/** Entrada suave (aparece e sobe um pouco) para conteúdos que mudam. */
+export function FadeIn({
+  children,
+  delay = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const [v] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    const a = Animated.timing(v, {
+      toValue: 1,
+      duration: 320,
+      delay,
+      easing: Easing.bezier(0.2, 0.8, 0.2, 1),
+      useNativeDriver: NATIVE,
+    });
+    a.start();
+    return () => a.stop();
+  }, [v, delay]);
+  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [10, 0] });
+  return <Animated.View style={[{ opacity: v, transform: [{ translateY }] }, style]}>{children}</Animated.View>;
 }
 
 /**
@@ -61,20 +118,16 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   const [v] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    Animated.timing(v, {
-      toValue: 1,
-      duration: 280,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: Platform.OS !== 'web',
-    }).start();
+    Animated.spring(v, { toValue: 1, friction: 9, tension: 70, useNativeDriver: NATIVE }).start();
   }, [v]);
-  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [40, 0] });
+  const translateY = v.interpolate({ inputRange: [0, 1], outputRange: [60, 0] });
+  const opacity = v.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0, 1, 1], extrapolate: 'clamp' });
   return (
     <Animated.View
       style={[
         styles.sheet,
         shadow(3),
-        { paddingBottom: Math.max(insets.bottom, 12) + 8, opacity: v, transform: [{ translateY }] },
+        { paddingBottom: Math.max(insets.bottom, 12) + 8, opacity, transform: [{ translateY }] },
         style,
       ]}
     >
@@ -90,12 +143,15 @@ export function Sheet({
           style={styles.grabArea}
         >
           <View style={styles.grab} />
-          <Text style={styles.grabHint}>{collapsed ? '▲ detalhes' : '▼ ver mapa'}</Text>
+          <View style={styles.grabHintRow}>
+            <Icon name={collapsed ? 'chevron-up' : 'chevron-down'} size={13} color={theme.muted} strokeWidth={2.4} />
+            <Text style={styles.grabHint}>{collapsed ? 'detalhes' : 'ver mapa'}</Text>
+          </View>
         </Pressable>
       ) : (
         <View style={styles.grab} />
       )}
-      {collapsed ? summary : children}
+      {collapsed ? <FadeIn key="s">{summary}</FadeIn> : children}
     </Animated.View>
   );
 }
@@ -114,31 +170,24 @@ export function MapButton({
   active?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
+  const press = usePressScale(0.92);
   return (
-    <Pressable
-      onPress={() => {
-        tap();
-        onPress();
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={6}
-      style={({ pressed }) => [
-        styles.mapBtn,
-        shadow(2),
-        active && { backgroundColor: theme.primary },
-        { transform: [{ scale: pressed ? 0.94 : 1 }] },
-        style,
-      ]}
-    >
-      {typeof icon === 'string' && icon.length > 2 ? (
-        <Icon name={icon as IconName} size={18} color={active ? '#fff' : theme.ink} />
-      ) : typeof icon === 'string' ? (
-        <Text style={{ fontSize: 18, color: active ? '#fff' : theme.ink }}>{icon}</Text>
-      ) : (
-        icon
-      )}
-    </Pressable>
+    <Animated.View style={[{ transform: [{ scale: press.scale }] }, style]}>
+      <Pressable
+        onPress={() => {
+          tap();
+          onPress();
+        }}
+        onPressIn={press.onPressIn}
+        onPressOut={press.onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        hitSlop={6}
+        style={[styles.mapBtn, shadow(2), active && { backgroundColor: theme.primary }]}
+      >
+        {typeof icon === 'string' ? <Icon name={icon as IconName} size={19} color={active ? '#fff' : theme.ink} /> : icon}
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -178,7 +227,7 @@ export function Stars({ value, onChange }: { value: number; onChange: (n: number
           style={{ padding: 4 }}
           accessibilityLabel={`${n} estrela(s)`}
         >
-          <Text style={{ fontSize: 36, color: n <= value ? theme.accent : theme.line }}>★</Text>
+          <Icon name="star" size={34} color={n <= value ? theme.accent : theme.line} strokeWidth={1.5} />
         </Pressable>
       ))}
     </View>
@@ -222,7 +271,8 @@ export function ErrorNote({ text }: { text: string }) {
 const TONES = {
   night: { bg: theme.nightSoft, fg: theme.night },
   warn: { bg: theme.warnSoft, fg: theme.warn },
-  accent: { bg: theme.accentSoft, fg: '#9A5A16' },
+  accent: { bg: theme.accentSoft, fg: theme.accentDark },
+  sand: { bg: theme.sandSoft, fg: theme.sand },
 };
 
 /** Etiquetas como "Tarifa nocturna +25%" ou "Trânsito intenso". */
@@ -249,7 +299,11 @@ export function FareDetails({ fare, perspective = 'passenger' }: { fare: Fare; p
     ['Tempo (inclui trânsito)', b.time],
   ];
   if (b.pickup) rows.push(['Ida do motorista até si', b.pickup]);
-  if (b.surcharge > 0) rows.push(['Ajuste de horário e procura', b.surcharge]);
+  if (b.stops) rows.push(['Paragens pelo caminho', b.stops]);
+  if (b.sand) rows.push(['Troços em estrada de areia', b.sand]);
+  if (b.waiting) rows.push(['Espera na recolha (após os minutos grátis)', b.waiting]);
+  if (b.delay) rows.push(['Tempo extra parado no trânsito', b.delay]);
+  if (b.surcharge > 0) rows.push(['Ajuste de horário, procura e chuva', b.surcharge]);
   if (b.surcharge < 0) rows.push(['Desconto (pouca procura)', b.surcharge]);
   if (b.guarantee) rows.push(['Garantia de ganho do motorista', b.guarantee]);
   if (b.serviceFee) rows.push(['Taxa de serviço', b.serviceFee]);
@@ -263,14 +317,14 @@ export function FareDetails({ fare, perspective = 'passenger' }: { fare: Fare; p
       ))}
       <View style={styles.fareLine} />
       <View style={styles.fareRow}>
-        <Text style={[styles.fareLabel, { fontWeight: '800', color: theme.ink }]}>Total</Text>
-        <Text style={[styles.fareValue, { fontWeight: '900' }]}>{money(fare.total)}</Text>
+        <Text style={[styles.fareLabel, { fontWeight: '600', color: theme.ink }]}>Total</Text>
+        <Text style={[styles.fareValue, { fontWeight: '700' }]}>{money(fare.total)}</Text>
       </View>
       <View style={styles.fareRow}>
-        <Text style={[styles.fareLabel, perspective === 'driver' && { color: theme.primary, fontWeight: '800' }]}>
+        <Text style={[styles.fareLabel, perspective === 'driver' && { color: theme.primary, fontWeight: '600' }]}>
           {perspective === 'driver' ? 'Você recebe' : 'Para o motorista'}
         </Text>
-        <Text style={[styles.fareValue, { color: theme.primary }]}>{money(fare.driverEarnings)}</Text>
+        <Text style={[styles.fareValue, { color: theme.primary, fontWeight: '700' }]}>{money(fare.driverEarnings)}</Text>
       </View>
       <View style={styles.fareRow}>
         <Text style={styles.fareLabel}>Taxa da plataforma</Text>
@@ -287,7 +341,7 @@ export function RoundButton({
   onPress,
   badge = 0,
 }: {
-  icon: string;
+  icon: IconName;
   label: string;
   onPress: () => void;
   badge?: number;
@@ -303,7 +357,7 @@ export function RoundButton({
       style={({ pressed }) => [styles.round, { opacity: pressed ? 0.8 : 1 }]}
       hitSlop={6}
     >
-      <Text style={{ fontSize: 20 }}>{icon}</Text>
+      <Icon name={icon} size={20} color={theme.primary} />
       {badge > 0 && (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
@@ -340,10 +394,12 @@ export const common = StyleSheet.create({
 
 const styles = StyleSheet.create({
   btn: {
-    minHeight: 48,
+    minHeight: 50,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     paddingHorizontal: 16,
   },
   btnText: { fontSize: 16, fontWeight: '600' },
@@ -362,10 +418,11 @@ const styles = StyleSheet.create({
   grab: { alignSelf: 'center', width: 42, height: 5, borderRadius: 3, backgroundColor: theme.line },
   grabArea: { alignSelf: 'center', alignItems: 'center', gap: 2, paddingHorizontal: 20 },
   grabHint: { fontSize: 11, fontWeight: '700', color: theme.muted },
+  grabHintRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   mapBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -417,7 +474,7 @@ const styles = StyleSheet.create({
   err: { backgroundColor: theme.dangerSoft, borderRadius: 12, padding: 10 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tag: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  tagText: { fontSize: 12, fontWeight: '800' },
+  tagText: { fontSize: 12, fontWeight: '700' },
   fare: { backgroundColor: theme.bg, borderRadius: 14, padding: 12, gap: 6 },
   fareRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   fareLabel: { fontSize: 13, color: theme.muted, flexShrink: 1 },

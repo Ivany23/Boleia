@@ -123,8 +123,8 @@ export function createMarket({ store = createMemoryStore(), clock = () => new Da
   }
 
   /** Procura suavizada na zona: sobe e desce gradualmente para o valor actual. */
-  function demand(category, point, waiting, free) {
-    const target = demandMultiplier(waiting, free);
+  function demand(category, point, waiting, free, recent = 0) {
+    const target = demandMultiplier(waiting, free, recent);
     const key = `${zoneOf(point)}|${category}`;
     const t = now();
     const s = smooth.get(key);

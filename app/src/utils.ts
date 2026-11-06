@@ -1,18 +1,21 @@
-import type { Category, LatLng, Payment, PricePeriod, Traffic } from './types';
+import type { Category, LatLng, Payment, PricePeriod, Rain, Surface, Traffic } from './types';
 
 export const MAPUTO: LatLng = { lat: -25.9692, lng: 32.5732 };
 
-export const CATEGORIES: { id: Category; label: string; icon: string; desc: string }[] = [
-  { id: 'moto', label: 'Moto', icon: 'motorcycle', desc: 'Rápida e económica' },
-  { id: 'economico', label: 'Económico', icon: 'car', desc: 'Carro para o dia a dia' },
-  { id: 'conforto', label: 'Conforto', icon: 'car', desc: 'Mais espaço e conforto' },
+export const CATEGORIES: { id: Category; label: string; icon: 'motorcycle' | 'taxi' | 'car'; desc: string }[] = [
+  { id: 'moto', label: 'Mota', icon: 'motorcycle', desc: 'Rápida e económica' },
+  { id: 'economico', label: 'Económico', icon: 'taxi', desc: 'Carro para o dia a dia' },
+  { id: 'conforto', label: 'Conforto', icon: 'car', desc: 'SUV: mais espaço, melhor na areia' },
 ];
 
-export const PAYMENTS: { id: Payment; label: string; note?: string }[] = [
-  { id: 'dinheiro', label: 'Dinheiro' },
-  { id: 'mpesa', label: 'M-Pesa', note: 'pagamento ao motorista' },
-  { id: 'emola', label: 'e-Mola', note: 'pagamento ao motorista' },
+export const PAYMENTS: { id: Payment; label: string; icon: 'cash' | 'phone'; note?: string }[] = [
+  { id: 'dinheiro', label: 'Dinheiro', icon: 'cash' },
+  { id: 'mpesa', label: 'M-Pesa', icon: 'phone', note: 'pagamento ao motorista' },
+  { id: 'emola', label: 'e-Mola', icon: 'phone', note: 'pagamento ao motorista' },
 ];
+
+/** Máximo de paragens pelo caminho (igual ao servidor). */
+export const MAX_STOPS = 3;
 
 export const categoryLabel = (c?: Category) => CATEGORIES.find((x) => x.id === c)?.label ?? '';
 
@@ -53,10 +56,19 @@ export const cleanPath = (pts: LatLng[] | undefined | null) =>
 export const pct = (m: number | undefined) =>
   `+${Math.round(((Number.isFinite(m as number) ? (m as number) : 1) - 1) * 100)}%`;
 
-export type Tag = { key: string; icon: string; text: string; tone: 'night' | 'warn' | 'accent' };
+export type Tag = { key: string; icon: string; text: string; tone: 'night' | 'warn' | 'accent' | 'sand' };
 
 /** Etiquetas que explicam o preço ao passageiro e ao motorista. */
-export function priceTags(p: { period?: PricePeriod; traffic?: Traffic; highDemand?: boolean }): Tag[] {
+export function priceTags(p: {
+  period?: PricePeriod;
+  traffic?: Traffic;
+  highDemand?: boolean;
+  surface?: Surface | null;
+  rain?: Rain | null;
+  fewDrivers?: Category[];
+  /** categoria escolhida (para "poucos carros por perto") */
+  category?: Category;
+}): Tag[] {
   const tags: Tag[] = [];
   if (p.period && p.period.multiplier > 1) {
     tags.push({
@@ -68,7 +80,14 @@ export function priceTags(p: { period?: PricePeriod; traffic?: Traffic; highDema
   }
   if (p.traffic === 'intenso') tags.push({ key: 'traffic', icon: 'traffic', text: 'Trânsito intenso', tone: 'warn' });
   else if (p.traffic === 'moderado') tags.push({ key: 'traffic', icon: 'car', text: 'Trânsito moderado', tone: 'warn' });
-  if (p.highDemand) tags.push({ key: 'demand', icon: 'bolt', text: 'Procura alta', tone: 'accent' });
+  if (p.rain) {
+    tags.push({ key: 'rain', icon: 'rain', text: `Chuva ${p.rain.level} ${pct(p.rain.multiplier)}`, tone: 'night' });
+  }
+  const few = !!p.category && !!p.fewDrivers?.includes(p.category);
+  if (few) tags.push({ key: 'few', icon: 'car', text: 'Poucos carros por perto', tone: 'accent' });
+  else if (p.highDemand) tags.push({ key: 'demand', icon: 'bolt', text: 'Procura alta', tone: 'accent' });
+  const sand = p.surface?.sandMeters ?? 0;
+  if (sand >= 50) tags.push({ key: 'sand', icon: 'sand', text: `Areia: ${formatDistance(sand)}`, tone: 'sand' });
   return tags;
 }
 

@@ -102,9 +102,11 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
   let trafficOffUntil = 0;
   const trafficWanted = () => process.env.ROUTES_TRAFFIC !== '0' && now() >= trafficOffUntil;
 
-  async function computeRoute(origin, destination, traffic) {
+  async function computeRoute(origin, destination, traffic, stops = []) {
     const ll = (p) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
     const body = { origin: ll(origin), destination: ll(destination), travelMode: 'DRIVE' };
+    // paragens intermédias, pela ordem escolhida pelo passageiro
+    if (stops.length) body.intermediates = stops.map(ll);
     body.routingPreference = traffic ? 'TRAFFIC_AWARE' : 'TRAFFIC_UNAWARE';
     return call(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
@@ -123,16 +125,23 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
     );
   }
 
-  /** Rota de carro: { distanceMeters, durationSeconds (com trânsito), staticDurationSeconds, polyline }. */
-  async function route(origin, destination) {
-    const key = `${r4(origin.lat)},${r4(origin.lng)}>${r4(destination.lat)},${r4(destination.lng)}`;
+  /**
+   * Rota de carro (com paragens opcionais pelo caminho):
+   * { distanceMeters, durationSeconds (com trânsito), staticDurationSeconds, polyline }.
+   */
+  async function route(origin, destination, stops = []) {
+    const via = (Array.isArray(stops) ? stops : []).map((p) => `${r4(p.lat)},${r4(p.lng)}`).join('>');
+    const key = `${r4(origin.lat)},${r4(origin.lng)}>${via ? via + '>' : ''}${r4(destination.lat)},${r4(destination.lng)}`;
+    stops = Array.isArray(stops) ? stops : [];
     const hit = cache.get(key);
     if (hit && now() - hit.at < TTL) return hit.value;
 
     let data;
+    let trafficAware = false;
     if (trafficWanted()) {
       try {
-        data = await computeRoute(origin, destination, true);
+        data = await computeRoute(origin, destination, true, stops);
+        trafficAware = true;
       } catch (e) {
         if (e?.status === 503) throw e; // chave em falta: não adianta tentar de novo
         // Recusa da Google (ex.: SKU não autorizado): desliga o trânsito por 30 min.
@@ -143,7 +152,7 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
         }
       }
     }
-    if (!data) data = await computeRoute(origin, destination, false);
+    if (!data) data = await computeRoute(origin, destination, false, stops);
 
     const r = data.routes?.[0];
     if (!r) throw new HttpError(404, 'Não foi possível calcular a rota entre os dois locais.');
@@ -152,8 +161,9 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
     const durationSeconds = secs(r.duration);
     const staticDurationSeconds = secs(r.staticDuration) || durationSeconds;
     const encoded = r.polyline?.encodedPolyline;
-    const polyline = encoded ? decodePolyline(encoded) : [origin, destination];
-    const value = { distanceMeters, durationSeconds, staticDurationSeconds, polyline };
+    const polyline = encoded ? decodePolyline(encoded) : [origin, ...stops, destination];
+    // trafficAware: false = a duração NÃO inclui o trânsito (o preço estima-o na hora de ponta)
+    const value = { distanceMeters, durationSeconds, staticDurationSeconds, polyline, trafficAware };
     cache.set(key, { at: now(), value });
     if (cache.size > 2000) cache.delete(cache.keys().next().value);
     return value;

@@ -52,7 +52,7 @@ type Ride = {
 | GET | `/api/health` | | `{ ok: true, drivers: number }` |
 | GET | `/api/places/autocomplete` | query `input`, `lat?`, `lng?`, `session` | `{ suggestions: { placeId: string; main: string; secondary: string }[] }` |
 | GET | `/api/places/details` | query `placeId`, `session` | `Place` |
-| POST | `/api/quote` | `{ origin: LatLng, destination: LatLng }` | `{ quoteId, validForSeconds, distanceMeters, durationSeconds, staticDurationSeconds, polyline, prices: Record<Category, number>, fares: Record<Category, Fare>, period, traffic, highDemand }` |
+| POST | `/api/quote` | `{ origin: LatLng, destination: LatLng, stops?: LatLng[] }` (até 3 paragens, pela ordem) | `{ quoteId, validForSeconds, distanceMeters, durationSeconds, staticDurationSeconds, polyline, stops, surface, rain, fewDrivers, freeWaitMin, waitRates, prices: Record<Category, number>, fares: Record<Category, Fare>, period, traffic, highDemand }` |
 | GET | `/api/pricing` | | `{ fuel: { gasolina, gasoleo, fonte }, platformFee, serviceFee, driverMinHourly, driverMinHourlyByCategory, period, rates, learning }` |
 | GET | `/api/geocode/reverse` | query `lat`, `lng` | `Place` (morada do ponto; `"Ponto no mapa"` se não houver) |
 | GET | `/api/config` | | `{ googleMapsWebKey: string \| null }` (chave do Google Maps do site, `GOOGLE_MAPS_WEB_KEY`) |
@@ -61,7 +61,15 @@ type Ride = {
 
 **WhatsApp (obrigatório):** `ride:request` e `driver:online` levam `phone` (Moçambique, redes 82–87; aceita `84 123 4567`, `+258 84 123 4567`, `258841234567`; guardado como `+2588XXXXXXXX`). Sem número válido: `ride:request` responde `{ ok:false, error }` e `driver:online` emite `driver:error { error }`. O WhatsApp do motorista nunca é enviado ao passageiro. Do cliente guarda-se só nome e WhatsApp; as viagens são guardadas sem moradas nem dados do passageiro (`server/src/db.js`).
 
-`Fare = { total, driverEarnings, platformFee, multiplier, driverCost, breakdown: { base, distance, time, pickup, guarantee, surcharge, serviceFee } }` (`driverEarnings + platformFee = total`; a soma do `breakdown` é o `total`; `surcharge` é negativo quando há desconto). A `Ride` inclui também `fare`, `period`, `traffic`, `highDemand`.
+`Fare = { total, driverEarnings, platformFee, multiplier, driverCost, breakdown: { base, distance, time, pickup, stops, sand, waiting?, delay?, guarantee, surcharge, serviceFee } }` (`driverEarnings + platformFee = total`; a soma do `breakdown` é o `total`; `surcharge` é negativo quando há desconto). A `Ride` inclui também `fare`, `period`, `traffic`, `highDemand`, `stops: Place[]` e `surface`.
+
+`Surface = { sandMeters, sandRatio, pickupSand, dropoffSand } | null`: troços do percurso em estrada de areia/terra (dados do OpenStreetMap guardados no servidor, `server/src/data/sand-maputo.json`; `null` fora da Grande Maputo ou com `SURFACE_CHECK=0`).
+
+**Ajustes automáticos** (multiplicador total limitado a 0,9–1,6): horário; procura na zona (pedidos à espera por carro livre; **nenhum carro livre perto ×1,15, só um ×1,05**; **pico de pedidos** nos últimos 15 min acima de 2 por carro livre, até +15%; procura total máx. ×1,3); **chuva** em Maputo (Open-Meteo, fraca ×1,10, forte ×1,20; `rain` na cotação; desligar `WEATHER_CHECK=0`); aprendizagem. Sem dados de trânsito na hora de ponta, o tempo é estimado com +30%.
+
+**Carro parado:** `freeWaitMin` (3) minutos de espera grátis depois de `ride:arrived`; depois `waitRatePerMin` por minuto (combustível ao ralenti + ganho mínimo por hora), cobrado em `ride:start` (`breakdown.waiting`, `extraWaitMin`). Se a viagem demorar mais do que o previsto × 1,25 + 5 min (parado no trânsito), o excesso é cobrado em `ride:complete` (`breakdown.delay`, `extraDelayMin`). Máx. 60 min de cada; estes extras vão todos para o motorista e `ride.price` é actualizado.
+
+**Paragens:** até 3 (`MAX_STOPS`). Cada paragem soma um valor fixo (Mota 10, Económico 15, Conforto 20 MZN) mais 3 min de espera à tarifa por minuto. **Areia:** cada km em areia soma uma fracção do preço por km (Mota 30%, Económico 60%, Conforto 40%); a garantia do motorista inclui este custo extra.
 
 Erros: HTTP 4xx/5xx com `{ error: string }` (mensagem em português).
 
@@ -80,7 +88,8 @@ Erros: HTTP 4xx/5xx com `{ error: string }` (mensagem em português).
   - multiplicador = horário × procura na zona × aprendizagem (0,9 a 1,6). Horário (hora de Maputo): noite 21h–05h ×1,25; ponta seg–sex 06h–09h ×1,15 e 16h30–19h30 ×1,20.
   - procura (`server/src/market.js`): pedidos à espera vs. motoristas livres a 5 km, até ×1,3, suavizada por zona (~2 km) com média exponencial de 2 min.
   - aprendizagem (`server/src/market.js`): por zona × horário (e categoria), contadores de cotações, pedidos, aceites, recusas e expiradas com meia-vida de 3 dias. Taxa de aceitação < 60% → sobe até +20%; > 85% com conversão < 30% → desce até −10%. Com poucos dados usa a cidade inteira. Guardada em PostgreSQL (`DATABASE_URL`), ou em memória.
-- Cotação com preço garantido: guardada 5 min com `quoteId`; `ride:request` com o mesmo `quoteId` e os mesmos locais (±150 m) paga esse valor.
+- Cotação com preço garantido: guardada 5 min com `quoteId`; `ride:request` com o mesmo `quoteId`, os mesmos locais (±150 m) e as mesmas paragens (mesma ordem) paga esse valor.
+- Rotas com paragens: Routes API com `intermediates`.
 - Morada de um ponto (`/api/geocode/reverse`): Places API (New) `places:searchNearby` (raio 120 m, por distância); se falhar, OpenStreetMap Nominatim (máx. 1 pedido/s). Cache de 24 h. A Geocoding API da Google não é usada (exige faturação).
 
 ## Socket.IO (mesmo servidor/porta)
@@ -96,7 +105,7 @@ Cliente → servidor:
 | `ride:cancel` | `{ rideId }` | passageiro ou motorista |
 | `ride:accept` / `ride:decline` | `{ rideId }` | motorista |
 | `ride:arrived` / `ride:start` / `ride:complete` | `{ rideId }` | motorista |
-| `ride:request` (campos extra) | `quoteId?: string`, `note?: string` (máx. 140) | preço garantido; nota que o motorista vê na oferta |
+| `ride:request` (campos extra) | `quoteId?: string`, `note?: string` (máx. 140), `stops?: Place[]` (máx. 3) | preço garantido; nota que o motorista vê na oferta; paragens pelo caminho |
 | `ride:cancel` (campo extra) | `reason?: string` (máx. 80) | a `Ride` cancelada traz `cancelledBy: 'passenger' \| 'driver'` e `cancelReason` |
 | `ride:rate` | `{ rideId, stars: 1..5 }` | passageiro, viagem concluída, uma vez; ack `{ ok }` |
 

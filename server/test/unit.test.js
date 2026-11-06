@@ -42,10 +42,10 @@ test('garantia por categoria: moto 210, económico 300, conforto 390 MZN/hora', 
 });
 
 test('preço: económico 5 km / 10 min, recolha 1,5 km (calculado à mão)', () => {
-  // custo/km = 7,5/100 × 93,69 + 3,5 = 10,527 ; porKm = 13,527 ; porMin = 0,012 × 93,69 + 1,2 = 2,324
-  // tarifa = 40 + 67,63 + 23,24 + recolha 1,5 × 10,527 (15,79) = 146,66
+  // custo/km = 7,5/100 × 93,69 + 3,5 = 10,527 ; porKm = 10,527 + 3,8 = 14,327 ; porMin = 0,012 × 93,69 + 1,8 = 2,924
+  // tarifa = 35 + 71,63 + 29,24 + recolha 1,5 × 10,527 (15,79) = 151,67
   // custo do motorista = 6,5 km × 10,527 + 10 min × 1,124 = 79,67
-  // garantia = 79,67 + 300/60 × (10 + 4,5 min de recolha) = 152,17  -> líquido 152,17
+  // garantia = 79,67 + 300/60 × (10 + 4,5 min de recolha) = 152,17  -> líquido 152,17 (garantia de 0,5)
   // 152,17 / 0,88 = 172,9 -> 175 ; + taxa de serviço 10 = 185
   const f = fareFor('economico', 5000, 600);
   assert.equal(f.total, 185);
@@ -55,9 +55,9 @@ test('preço: económico 5 km / 10 min, recolha 1,5 km (calculado à mão)', () 
 });
 
 test('preço: motorista ao lado (recolha 0 m) fica mais barato', () => {
-  // tarifa = 40 + 67,63 + 23,24 = 130,87 ; garantia = 52,63 + 11,24 + 50 = 113,88 (não activa)
-  // 130,87 / 0,88 = 148,7 -> 150 ; + 10 = 160
-  assert.equal(priceFor('economico', 5000, 600, { pickupMeters: 0 }), 160);
+  // tarifa = 35 + 71,63 + 29,24 = 135,88 ; garantia = 52,63 + 11,24 + 50 = 113,88 (não activa)
+  // 135,88 / 0,88 = 154,4 -> 155 ; + 10 = 165
+  assert.equal(priceFor('economico', 5000, 600, { pickupMeters: 0 }), 165);
   assert.ok(priceFor('economico', 5000, 600, { pickupMeters: 4000 }) > 185);
 });
 
@@ -169,7 +169,8 @@ test('trânsito e procura instantânea', () => {
   assert.equal(trafficLevel(900, 600), 'intenso');
   assert.equal(trafficLevel(600, 0), 'desconhecido');
   assert.equal(demandMultiplier(1, 3), 1);
-  assert.equal(demandMultiplier(3, 0), 1);
+  assert.equal(demandMultiplier(3, 0), 1.15, 'nenhum carro livre: +15%');
+  assert.equal(demandMultiplier(0, 0), 1, 'sem pedido, sem ajuste');
   assert.equal(demandMultiplier(3, 1), 1.2);
   assert.equal(demandMultiplier(100, 1), 1.3);
 });
@@ -200,7 +201,9 @@ test('pricingInfo', () => {
   assert.equal(i.serviceFee, 10);
   assert.equal(i.driverMinHourly, 300);
   assert.equal(i.period.id, 'normal');
-  assert.ok(i.rates.economico.porKm > 13 && i.rates.economico.porKm < 14);
+  assert.ok(i.rates.economico.porKm > 14 && i.rates.economico.porKm < 15);
+  assert.equal(i.maxStops, 3);
+  assert.ok(i.rates.economico.paragem > 15 && i.rates.economico.areiaPorKm > 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -319,8 +322,10 @@ test('cotações: preço garantido 5 min e só para os mesmos locais', async () 
   const q = await qs.quote(A, B);
   assert.equal(quotesSeen, 1);
   assert.equal(typeof q.quoteId, 'string');
-  assert.equal(q.prices.economico, 160);
+  assert.equal(q.prices.economico, 165);
   assert.equal(q.staticDurationSeconds, 600);
+  assert.deepEqual(q.stops, []);
+  assert.equal(q.surface, null);
   assert.equal(qs.lookup(q.quoteId, A, B), q);
   assert.equal(qs.lookup(q.quoteId, A, { lat: -25.9, lng: 32.4 }), null, 'destino diferente');
   assert.equal(qs.lookup('nao-existe', A, B), null);

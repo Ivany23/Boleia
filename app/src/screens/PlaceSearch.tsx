@@ -73,12 +73,15 @@ export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent, onPi
   return (
     <View style={[styles.root, { paddingTop: insets.top + 8, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
-        <Pressable onPress={onClose} hitSlop={10} style={styles.back}>
-          <Text style={{ fontSize: 22, color: theme.ink }}>‹</Text>
+        <Pressable onPress={onClose} hitSlop={10} style={styles.back} accessibilityRole="button" accessibilityLabel="Voltar">
+          <Icon name="back" size={22} color={theme.ink} />
         </Pressable>
         <Text style={styles.title}>{title}</Text>
       </View>
       <View style={styles.inputWrap}>
+        <View style={{ paddingLeft: 14 }}>
+          <Icon name="search" size={17} color={theme.muted} />
+        </View>
         <TextInput
           autoFocus
           value={text}
@@ -96,15 +99,15 @@ export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent, onPi
       </View>
       {onUseCurrent && (
         <Pressable onPress={onUseCurrent} style={styles.item}>
-          <View style={styles.iconBox}>
-            <Icon name="my-location" size={18} color={theme.primary} />
+          <View style={[styles.iconBox, { backgroundColor: theme.infoSoft }]}>
+            <Icon name="my-location" size={18} color={theme.info} />
           </View>
           <Text style={styles.main}>Usar a minha localização</Text>
         </Pressable>
       )}
       {onPickOnMap && (
         <Pressable onPress={onPickOnMap} style={styles.item} accessibilityRole="button">
-          <View style={styles.iconBox}>
+          <View style={[styles.iconBox, { backgroundColor: theme.primarySoft }]}>
             <Icon name="map" size={18} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
@@ -154,9 +157,9 @@ const styles = StyleSheet.create({
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '600', color: theme.ink },
   inputWrap: { flexDirection: 'row', alignItems: 'center', margin: 14, paddingRight: 14, backgroundColor: theme.bg, borderRadius: 14 },
-  input: { flex: 1, minHeight: 48, paddingHorizontal: 16, fontSize: 15, color: theme.ink },
+  input: { flex: 1, minHeight: 50, paddingHorizontal: 10, fontSize: 15, color: theme.ink },
   item: { flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: theme.line },
-  iconBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  iconBox: { width: 36, height: 36, borderRadius: 12, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   main: { fontSize: 15, fontWeight: '600', color: theme.ink },
   sec: { fontSize: 12.5, color: theme.muted, marginTop: 2 },
   empty: { textAlign: 'center', color: theme.muted, marginTop: 30 },

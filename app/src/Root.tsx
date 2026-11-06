@@ -9,7 +9,7 @@ import { PassengerScreen } from './screens/PassengerScreen';
 import { StartScreen } from './screens/StartScreen';
 import { useConnected } from './socket';
 import { saveProfile, type ThemePref } from './storage';
-import { isDark, theme } from './theme';
+import { isDark, shadow, theme } from './theme';
 import type { Profile } from './types';
 
 /**
@@ -70,8 +70,10 @@ export function Root({ initialProfile, themePref }: { initialProfile: Profile | 
 
   return Platform.OS === 'web' ? (
     // No computador, a app aparece centrada com largura de telemóvel
-    <View style={{ flex: 1, backgroundColor: isDark() ? '#0B110E' : '#06512F', alignItems: 'center' }}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: theme.bg }}>{content}</View>
+    <View style={{ flex: 1, backgroundColor: isDark() ? '#0B110E' : '#DCEBE3', alignItems: 'center' }}>
+      <View style={[{ flex: 1, width: '100%', maxWidth: 480, backgroundColor: theme.bg, overflow: 'hidden' }, shadow(2)]}>
+        {content}
+      </View>
     </View>
   ) : (
     content

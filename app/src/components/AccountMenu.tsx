@@ -22,10 +22,10 @@ export function reloadApp() {
   }
 }
 
-const THEMES: { id: ThemePref; label: string }[] = [
-  { id: 'auto', label: 'Automático' },
-  { id: 'light', label: 'Claro' },
-  { id: 'dark', label: 'Escuro' },
+const THEMES: { id: ThemePref; label: string; icon: 'sun' | 'moon' | 'palette' }[] = [
+  { id: 'light', label: 'Claro', icon: 'sun' },
+  { id: 'dark', label: 'Escuro', icon: 'moon' },
+  { id: 'auto', label: 'Do telemóvel', icon: 'palette' },
 ];
 
 export function AccountMenu({
@@ -61,8 +61,8 @@ export function AccountMenu({
           </View>
 
           <View style={[common.row, { gap: 6, marginTop: 6 }]}>
-            <Icon name="moon" size={15} color={theme.muted} />
-            <Text style={styles.section}>Modo nocturno</Text>
+            <Icon name="palette" size={15} color={theme.muted} />
+            <Text style={styles.section}>Aparência</Text>
           </View>
           <View style={styles.segment}>
             {THEMES.map((t) => {
@@ -80,6 +80,7 @@ export function AccountMenu({
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on }}
                 >
+                  <Icon name={t.icon} size={14} color={on ? '#fff' : theme.muted} />
                   <Text style={[styles.segText, on && { color: '#fff' }]}>{t.label}</Text>
                 </Pressable>
               );
@@ -93,8 +94,8 @@ export function AccountMenu({
               onSwitchRole();
             }}
           >
-            <View style={styles.rowIcon}>
-              <Icon name="swap" size={18} color={theme.ink} />
+            <View style={[styles.rowIcon, { backgroundColor: theme.infoSoft }]}>
+              <Icon name="swap" size={17} color={theme.info} />
             </View>
             <Text style={styles.rowText}>{isDriver ? 'Usar como passageiro' : 'Conduzir com a Boleia (motorista)'}</Text>
           </Pressable>
@@ -105,8 +106,8 @@ export function AccountMenu({
               onLogout();
             }}
           >
-            <View style={styles.rowIcon}>
-              <Icon name="logout" size={18} color={theme.danger} />
+            <View style={[styles.rowIcon, { backgroundColor: theme.dangerSoft }]}>
+              <Icon name="logout" size={17} color={theme.danger} />
             </View>
             <Text style={[styles.rowText, { color: theme.danger }]}>Terminar sessão</Text>
           </Pressable>
@@ -125,10 +126,10 @@ const styles = StyleSheet.create({
   grab: { alignSelf: 'center', width: 42, height: 5, borderRadius: 3, backgroundColor: theme.line, marginBottom: 4 },
   section: { fontSize: 13, fontWeight: '600', color: theme.muted },
   segment: { flexDirection: 'row', backgroundColor: theme.bg, borderRadius: 12, padding: 4, gap: 4 },
-  segItem: { flex: 1, minHeight: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  segItem: { flex: 1, minHeight: 38, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   segOn: { backgroundColor: theme.primary },
   segText: { fontSize: 13, fontWeight: '600', color: theme.ink },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, borderBottomWidth: 1, borderBottomColor: theme.line },
-  rowIcon: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  rowIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { fontSize: 14.5, fontWeight: '500', color: theme.ink },
 });

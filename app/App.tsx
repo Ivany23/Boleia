@@ -17,6 +17,19 @@ function warmUp() {
     document.head.appendChild(l);
   }
   fetch(`${SERVER_URL}/api/health`).catch(() => {});
+  // Suavidade no browser: texto nítido, sem "flash" ao tocar, transições de cor suaves
+  if (!document.getElementById('boleia-css')) {
+    const st = document.createElement('style');
+    st.id = 'boleia-css';
+    st.textContent = [
+      'html,body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}',
+      '[role="button"],[role="radio"],[role="search"]{transition:background-color .22s ease,border-color .22s ease,opacity .22s ease,box-shadow .22s ease;cursor:pointer}',
+      '.leaflet-container{font-family:inherit}',
+      '.leaflet-control-attribution{font-size:10px;opacity:.75}',
+      '@media (prefers-reduced-motion: reduce){*{transition:none!important}}',
+    ].join('\n');
+    document.head.appendChild(st);
+  }
 }
 
 type Boot = { Root: React.ComponentType<{ initialProfile: Profile | null; themePref: ThemePref }>; profile: Profile | null; pref: ThemePref };

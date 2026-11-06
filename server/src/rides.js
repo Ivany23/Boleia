@@ -1,6 +1,15 @@
 import { haversine } from './geo.js';
 import { createMarket, zoneOf } from './market.js';
-import { CATEGORIES, PAYMENTS } from './pricing.js';
+import {
+  CATEGORIES,
+  FREE_WAIT_MIN,
+  MAX_STOPS,
+  PAYMENTS,
+  addExtra,
+  delayMinutes,
+  extraCharge,
+  waitRatePerMin,
+} from './pricing.js';
 import { createMemoryRepo, normalizePhone } from './repo.js';
 
 const PHONE_ERROR = 'Indique um número de WhatsApp válido (ex.: 84 123 4567).';
@@ -11,11 +20,14 @@ const MAX_PICKUP_M = 10000;
 const NEARBY_M = 5000;
 const DEMAND_RADIUS_M = 5000;
 const ENDED_TTL_MS = 30 * 60 * 1000;
+const RECENT_MS = 15 * 60 * 1000; // janela para contar picos de pedidos
 const RATING_PRIOR = 5; // avaliações "virtuais" iniciais, para uma nota não cair a pique
 
 const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
 export const validLatLng = (p) =>
   !!p && isNum(p.lat) && isNum(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
+/** Paragens intermédias: lista (pode ser vazia) de até MAX_STOPS pontos válidos. */
+export const validStops = (s) => Array.isArray(s) && s.length <= MAX_STOPS && s.every(validLatLng);
 const str = (s, max = 120) => (typeof s === 'string' ? s.trim().slice(0, max) : '');
 const place = (p) => ({ lat: p.lat, lng: p.lng, address: str(p.address, 300) });
 
@@ -49,6 +61,7 @@ export function createRideService({
   const ended = new Map(); // rideId -> ms em que terminou
   const rated = new Set(); // rideIds já avaliados
   const rideDriverPhone = new Map(); // rideId -> WhatsApp do motorista (nunca enviado ao passageiro)
+  let recentRequests = []; // { at, point, category } dos últimos 15 min (picos de pedidos)
   let seq = 0;
 
   const say = (msg) => log(`[boleia] ${msg}`);
@@ -164,7 +177,7 @@ export function createRideService({
     }
   }
 
-  /** Multiplicador de procura numa zona: pedidos à espera vs. motoristas livres. */
+  /** Multiplicador de procura numa zona: pedidos à espera, carros livres e picos de pedidos. */
   function demand(category, point) {
     if (!validLatLng(point)) return 1;
     let waiting = 1; // o próprio pedido que está a ser cotado
@@ -179,7 +192,37 @@ export function createRideService({
         free++;
       }
     }
-    return market.demand(category, point, waiting, free);
+    const since = nowMs() - RECENT_MS;
+    recentRequests = recentRequests.filter((r) => r.at >= since);
+    let recent = 0;
+    for (const r of recentRequests) {
+      if (r.category === category && haversine(r.point, point) <= DEMAND_RADIUS_M) recent++;
+    }
+    return market.demand(category, point, waiting, free, recent);
+  }
+
+  /** Carro parado: espera paga depois de FREE_WAIT_MIN minutos na recolha. */
+  function chargeWaiting(ride) {
+    if (!ride.arrivedAt || !ride.fare) return;
+    const waited = (nowMs() - ride.arrivedAt) / 60000 - FREE_WAIT_MIN;
+    const charge = extraCharge(ride.category, waited);
+    if (charge > 0) {
+      ride.fare = addExtra(ride.fare, 'waiting', charge);
+      ride.price = ride.fare.total;
+      ride.extraWaitMin = Math.ceil(waited);
+    }
+  }
+
+  /** Carro parado no trânsito: tempo muito acima do previsto é pago no fim. */
+  function chargeDelay(ride) {
+    if (!ride.startedAt || !ride.fare) return;
+    const over = delayMinutes(ride.durationSeconds, (nowMs() - ride.startedAt) / 60000);
+    const charge = extraCharge(ride.category, over);
+    if (charge > 0) {
+      ride.fare = addExtra(ride.fare, 'delay', charge);
+      ride.price = ride.fare.total;
+      ride.extraDelayMin = Math.ceil(over);
+    }
   }
 
   /** Distância (m) do motorista livre mais próximo da categoria, ou null se não houver. */
@@ -225,6 +268,10 @@ export function createRideService({
     if (!p || !validLatLng(p.pickup) || !validLatLng(p.dropoff)) {
       return { ok: false, error: 'Locais de recolha e destino inválidos.' };
     }
+    if (p.stops != null && !validStops(p.stops)) {
+      return { ok: false, error: `Paragens inválidas (no máximo ${MAX_STOPS}).` };
+    }
+    const stops = (p.stops ?? []).map(place);
     if (!CATEGORIES.includes(p.category)) return { ok: false, error: 'Categoria inválida.' };
     if (!PAYMENTS.includes(p.payment)) return { ok: false, error: 'Forma de pagamento inválida.' };
     const phone = normalizePhone(p.phone);
@@ -236,10 +283,10 @@ export function createRideService({
     repo
       .savePassenger({ phone, name: str(p.passengerName, 60) || passengers.get(socket.id)?.name || 'Passageiro' })
       .catch(() => {});
-    let q = quotes.lookup(p.quoteId, p.pickup, p.dropoff);
+    let q = quotes.lookup(p.quoteId, p.pickup, p.dropoff, stops);
     if (!q) {
       try {
-        q = await quotes.quote(p.pickup, p.dropoff);
+        q = await quotes.quote(p.pickup, p.dropoff, stops);
       } catch (e) {
         say(`cotação falhou: ${e?.message ?? 'erro'}`);
         return {
@@ -260,12 +307,17 @@ export function createRideService({
       passengerName: str(p.passengerName, 60) || passengers.get(socket.id)?.name || 'Passageiro',
       pickup: place(p.pickup),
       dropoff: place(p.dropoff),
+      stops,
+      surface: q.surface ?? null,
       category: p.category,
       payment: p.payment,
       note: str(p.note, 140),
       price: fare.total,
       fare,
       period: q.period,
+      rain: q.rain ?? null,
+      freeWaitMin: FREE_WAIT_MIN,
+      waitRatePerMin: waitRatePerMin(p.category),
       traffic: q.traffic,
       highDemand: !!q.highDemand,
       distanceMeters: q.distanceMeters,
@@ -274,6 +326,8 @@ export function createRideService({
       createdAt: Date.now(),
     };
     rides.set(ride.id, ride);
+    recentRequests.push({ at: nowMs(), point: { lat: ride.pickup.lat, lng: ride.pickup.lng }, category: ride.category });
+    if (recentRequests.length > 5000) recentRequests = recentRequests.slice(-5000);
     meta.set(ride.id, { tried: new Set(), timer: null, offeredTo: null });
     say(`viagem ${ride.id} criada (${ride.category}, ${ride.price} MZN, ${q.period.label})`);
     note('request', ride);
@@ -411,15 +465,21 @@ export function createRideService({
 
     on('ride:arrived', (p) => {
       const r = asDriver(p, 'accepted');
-      if (r) setStatus(r, 'arrived');
+      if (!r) return;
+      r.arrivedAt = nowMs();
+      setStatus(r, 'arrived');
     });
     on('ride:start', (p) => {
       const r = asDriver(p, 'arrived');
-      if (r) setStatus(r, 'in_progress');
+      if (!r) return;
+      chargeWaiting(r);
+      r.startedAt = nowMs();
+      setStatus(r, 'in_progress');
     });
     on('ride:complete', (p) => {
       const r = asDriver(p, 'in_progress');
       if (!r) return;
+      chargeDelay(r);
       const d = drivers.get(socket.id);
       if (d) {
         d.busy = false;

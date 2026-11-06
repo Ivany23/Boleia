@@ -91,9 +91,12 @@ test('fluxo completo: pedido → oferta → aceitar → chegou → iniciar → c
   const r = await ack(pax, 'ride:request', reqBody({ pickup: ZONE(0) }));
   assert.equal(r.ok, true);
   assert.equal(r.ride.status, 'searching');
-  assert.equal(r.ride.price, 160);
-  assert.equal(r.ride.fare.total, 160);
-  assert.equal(r.ride.fare.driverEarnings + r.ride.fare.platformFee, 160);
+  // um só carro livre por perto (o deste teste, à porta): +5% por falta de carros
+  const expected = priceFor('economico', 5000, 600, { pickupMeters: 0, multiplier: 1.05 });
+  assert.equal(expected, 170);
+  assert.equal(r.ride.price, expected);
+  assert.equal(r.ride.fare.total, expected);
+  assert.equal(r.ride.fare.driverEarnings + r.ride.fare.platformFee, expected);
   assert.equal(r.ride.period.id, 'normal');
   assert.equal(r.ride.traffic, 'livre');
   assert.equal(r.ride.passengerId, pax.id);
@@ -246,7 +249,10 @@ test('REST: health, quote, erros', async () => {
   const q = await (await post(JSON.stringify({ origin: BAIXA, destination: DEST }))).json();
   // o preço usa a distância real do motorista livre mais próximo da recolha
   const pk = srv.rides.nearestFree('economico', BAIXA) ?? DEFAULT_PICKUP_M;
-  assert.equal(q.prices.economico, priceFor('economico', 5000, 600, { pickupMeters: pk }));
+  // procura/falta de carros na zona (depende dos motoristas dos outros testes)
+  const mult = q.fares.economico.multiplier;
+  assert.ok(mult >= 1 && mult <= 1.3, String(mult));
+  assert.equal(q.prices.economico, priceFor('economico', 5000, 600, { pickupMeters: pk, multiplier: mult }));
   assert.equal(q.fares.economico.total, q.prices.economico);
   assert.equal(typeof q.quoteId, 'string');
   assert.equal(q.period.id, 'normal');
