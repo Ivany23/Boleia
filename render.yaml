@@ -1,4 +1,4 @@
-# Render Blueprint: servidor Boleia (Express + Socket.IO)
+# Render Blueprint: servidor Boleia (Express + Socket.IO) + base de dados PostgreSQL
 # No Render: New > Blueprint > escolher este repositório. Depois preencher as chaves da Google.
 services:
   - type: web
@@ -18,4 +18,18 @@ services:
         sync: false
       - key: GOOGLE_PLACES_API_KEY
         sync: false
-      # Opcionais (preços): FUEL_GASOLINA_MZN, FUEL_GASOLEO_MZN, FUEL_FONTE, PLATFORM_FEE, ROUTES_TRAFFIC
+      # Aprendizagem de preços (estatísticas guardadas na base de dados)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: boleia-db
+          property: connectionString
+      # Opcionais (preços): FUEL_GASOLINA_MZN, FUEL_GASOLEO_MZN, FUEL_FONTE,
+      # PLATFORM_FEE (0.12), SERVICE_FEE (10), DRIVER_MIN_HOURLY (300), ROUTES_TRAFFIC
+
+databases:
+  - name: boleia-db
+    plan: free
+    region: frankfurt
+    databaseName: boleia
+    user: boleia
+    ipAllowList: [] # só o servidor do Render tem acesso

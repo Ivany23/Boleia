@@ -20,7 +20,6 @@ import {
 import { VehicleMarker } from '../components/VehicleMarker';
 import { ViewMarker } from '../components/ViewMarker';
 import { notify } from '../haptics';
-import { mapStyle } from '../mapStyle';
 import { bearing, useSmoothPoint } from '../motion';
 import { currentPosition } from '../location';
 import { getSocket } from '../socket';
@@ -313,7 +312,6 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={{ ...toRN(pos), latitudeDelta: 0.03, longitudeDelta: 0.03 }}
-        customMapStyle={mapStyle}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsBuildings
@@ -404,6 +402,11 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
                 <Text style={common.muted}>
                   Gasolina {pricing.fuel.gasolina.toFixed(2).replace('.', ',')} MT/L · já incluída no preço
                 </Text>
+                {pricing.driverMinHourly ? (
+                  <Text style={common.muted}>
+                    Ganho mínimo garantido: {money(pricing.driverMinHourly)}/hora, além do combustível
+                  </Text>
+                ) : null}
               </View>
             </View>
           )}

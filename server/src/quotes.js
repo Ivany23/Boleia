@@ -10,9 +10,20 @@ const SAME_PLACE_M = 150;
  * desde que peça a viagem dentro de 5 minutos e com os mesmos locais.
  *
  * route(origin, destination) -> { distanceMeters, durationSeconds, staticDurationSeconds?, polyline }
- * demand(category, point) -> multiplicador de procura (>= 1)
+ * demand(category, point)    -> multiplicador de procura na zona (>= 1)
+ * learning(category, point)  -> factor aprendido (0,9 a 1,2)
+ * pickup(category, point)    -> metros do motorista livre mais próximo (ou null)
+ * onQuote(point)             -> regista a cotação (estatísticas)
  */
-export function createQuoteService({ route, demand = () => 1, clock = () => new Date(), ttlMs = QUOTE_TTL_MS }) {
+export function createQuoteService({
+  route,
+  demand = () => 1,
+  learning = () => 1,
+  pickup = () => null,
+  onQuote = () => {},
+  clock = () => new Date(),
+  ttlMs = QUOTE_TTL_MS,
+}) {
   const store = new Map(); // quoteId -> { origin, destination, value, expiresAt }
 
   function sweep(nowMs) {
@@ -23,7 +34,19 @@ export function createQuoteService({ route, demand = () => 1, clock = () => new 
     const r = await route(origin, destination);
     const date = clock();
     const nowMs = date.getTime();
-    const priced = priceRoute(r, { date, demand: (c) => demand(c, origin) });
+    const safe = (fn, def) => (c) => {
+      try {
+        return fn(c, origin);
+      } catch {
+        return def;
+      }
+    };
+    const priced = priceRoute(r, {
+      date,
+      demand: safe(demand, 1),
+      learning: safe(learning, 1),
+      pickup: safe(pickup, null),
+    });
     const value = {
       quoteId: randomUUID(),
       expiresAt: nowMs + ttlMs,
@@ -41,6 +64,11 @@ export function createQuoteService({ route, demand = () => 1, clock = () => new 
       value,
       expiresAt: value.expiresAt,
     });
+    try {
+      onQuote(origin);
+    } catch {
+      // as estatísticas nunca impedem a cotação
+    }
     return value;
   }
 

@@ -53,9 +53,10 @@ type Ride = {
 | GET | `/api/places/autocomplete` | query `input`, `lat?`, `lng?`, `session` | `{ suggestions: { placeId: string; main: string; secondary: string }[] }` |
 | GET | `/api/places/details` | query `placeId`, `session` | `Place` |
 | POST | `/api/quote` | `{ origin: LatLng, destination: LatLng }` | `{ quoteId, validForSeconds, distanceMeters, durationSeconds, staticDurationSeconds, polyline, prices: Record<Category, number>, fares: Record<Category, Fare>, period, traffic, highDemand }` |
-| GET | `/api/pricing` | | `{ fuel: { gasolina, gasoleo, fonte }, platformFee, period, rates }` |
+| GET | `/api/pricing` | | `{ fuel: { gasolina, gasoleo, fonte }, platformFee, serviceFee, driverMinHourly, driverMinHourlyByCategory, period, rates, learning }` |
+| GET | `/api/geocode/reverse` | query `lat`, `lng` | `Place` (morada do ponto; `"Ponto no mapa"` se não houver) |
 
-`Fare = { total, driverEarnings, platformFee, multiplier, breakdown: { base, distance, time, surcharge } }` (`driverEarnings + platformFee = total`). A `Ride` inclui também `fare`, `period`, `traffic`, `highDemand`.
+`Fare = { total, driverEarnings, platformFee, multiplier, driverCost, breakdown: { base, distance, time, pickup, guarantee, surcharge, serviceFee } }` (`driverEarnings + platformFee = total`; a soma do `breakdown` é o `total`; `surcharge` é negativo quando há desconto). A `Ride` inclui também `fare`, `period`, `traffic`, `highDemand`.
 
 Erros: HTTP 4xx/5xx com `{ error: string }` (mensagem em português).
 
@@ -66,12 +67,16 @@ Erros: HTTP 4xx/5xx com `{ error: string }` (mensagem em português).
 - Cache em memória das cotações (chave = coordenadas arredondadas a 4 casas) durante 5 min, para poupar pedidos à Google.
 - Rota com trânsito real (`routingPreference: TRAFFIC_AWARE`, campo `routes.staticDuration` para comparar). Se a Google recusar, recua para `TRAFFIC_UNAWARE` durante 30 min. `ROUTES_TRAFFIC=0` desliga.
 - Preço (MZN), em `server/src/pricing.js`, indexado ao preço da gasolina (ARENE, `FUEL_GASOLINA_MZN`):
-  - `porKm = consumo/100 × gasolina × 1,25 + desgaste + ganhoKm`; `porMin = ralenti × gasolina + ganhoMin`
-  - líquido do motorista = `(base + km × porKm + min × porMin) × multiplicador`
-  - total = líquido / (1 − comissão), mínimo `minimo`, arredondado a 5. Comissão `PLATFORM_FEE` (0,12).
-  - multiplicador = horário × procura (máx. 1,6). Horário (hora de Maputo): noite 21h–05h ×1,25; ponta seg–sex 06h–09h ×1,15 e 16h30–19h30 ×1,20. Procura: pedidos à espera vs. motoristas livres a 5 km, até ×1,3.
+  - `custoKm = consumo/100 × gasolina + desgaste`; `porKm = custoKm + ganhoKm`; `porMin = ralenti × gasolina + ganhoMin`
+  - tarifa = `base + km × porKm + min × porMin + min(recolha, 5 km) × custoKm` (recolha = motorista livre mais próximo; sem nenhum, 1,5 km)
+  - garantia = custo real (km da recolha + viagem, ralenti) + ganho mínimo/hora × (minutos da viagem + recolha a 20 km/h); ganho mínimo `DRIVER_MIN_HOURLY` (300) × 0,7 moto / 1 económico / 1,3 conforto
+  - líquido = `max(max(tarifa, garantia) × multiplicador, garantia)`
+  - total = `arredonda5(max(líquido / (1 − comissão), mínimo × multiplicador)) + SERVICE_FEE` (10). Comissão `PLATFORM_FEE` (0,12).
+  - multiplicador = horário × procura na zona × aprendizagem (0,9 a 1,6). Horário (hora de Maputo): noite 21h–05h ×1,25; ponta seg–sex 06h–09h ×1,15 e 16h30–19h30 ×1,20.
+  - procura (`server/src/market.js`): pedidos à espera vs. motoristas livres a 5 km, até ×1,3, suavizada por zona (~2 km) com média exponencial de 2 min.
+  - aprendizagem (`server/src/market.js`): por zona × horário (e categoria), contadores de cotações, pedidos, aceites, recusas e expiradas com meia-vida de 3 dias. Taxa de aceitação < 60% → sobe até +20%; > 85% com conversão < 30% → desce até −10%. Com poucos dados usa a cidade inteira. Guardada em PostgreSQL (`DATABASE_URL`), ou em memória.
 - Cotação com preço garantido: guardada 5 min com `quoteId`; `ride:request` com o mesmo `quoteId` e os mesmos locais (±150 m) paga esse valor.
-- NÃO usar a Geocoding API nem a Route Matrix API (o projeto ainda não tem faturação). A morada da posição atual vem do telemóvel (`expo-location` `reverseGeocodeAsync`).
+- Morada de um ponto (`/api/geocode/reverse`): Places API (New) `places:searchNearby` (raio 120 m, por distância); se falhar, OpenStreetMap Nominatim (máx. 1 pedido/s). Cache de 24 h. A Geocoding API da Google não é usada (exige faturação).
 
 ## Socket.IO (mesmo servidor/porta)
 

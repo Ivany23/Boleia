@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import { reverseGeocode } from './api';
 import type { LatLng } from './types';
 import { MAPUTO } from './utils';
 
@@ -40,6 +41,12 @@ export async function addressOf(p: LatLng): Promise<string> {
       );
       if (parts.length) return parts.join(', ');
     }
+  } catch {
+    // no browser (web) o telemóvel não dá a morada: pergunta ao servidor
+  }
+  try {
+    const r = await reverseGeocode(p);
+    if (r.address && r.address !== 'Ponto no mapa') return r.address;
   } catch {
     // ignore
   }

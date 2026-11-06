@@ -1,5 +1,6 @@
 import { haversine } from './geo.js';
-import { CATEGORIES, PAYMENTS, demandMultiplier } from './pricing.js';
+import { createMarket } from './market.js';
+import { CATEGORIES, PAYMENTS } from './pricing.js';
 
 const ACTIVE = ['accepted', 'arrived', 'in_progress'];
 const TERMINAL = ['completed', 'cancelled', 'no_drivers'];
@@ -32,6 +33,7 @@ const publicDriver = (d) => ({
 export function createRideService({
   io,
   quotes,
+  market = createMarket(),
   offerTimeoutMs = 15000,
   clock = () => new Date(),
   log = console.log,
@@ -94,6 +96,7 @@ export function createRideService({
     m.timer = setTimeout(() => {
       try {
         say(`oferta ${ride.id} expirou para motorista ${d.id}`);
+        note('expired', ride);
         clearOffer(ride);
         offerNext(ride);
       } catch (e) {
@@ -168,8 +171,23 @@ export function createRideService({
         free++;
       }
     }
-    return demandMultiplier(waiting, free);
+    return market.demand(category, point, waiting, free);
   }
+
+  /** Distância (m) do motorista livre mais próximo da categoria, ou null se não houver. */
+  function nearestFree(category, point) {
+    if (!validLatLng(point)) return null;
+    let best = null;
+    for (const d of drivers.values()) {
+      if (d.busy || d.offering || d.category !== category) continue;
+      const dist = haversine(d.location, point);
+      if (dist <= MAX_PICKUP_M && (best === null || dist < best)) best = dist;
+    }
+    return best;
+  }
+
+  const learning = (category, point) => market.learning(category, point, clock());
+  const note = (event, ride) => market.record(event, { point: ride.pickup, category: ride.category, date: clock() });
 
   async function requestRide(socket, p) {
     if (!p || !validLatLng(p.pickup) || !validLatLng(p.dropoff)) {
@@ -220,6 +238,7 @@ export function createRideService({
     rides.set(ride.id, ride);
     meta.set(ride.id, { tried: new Set(), timer: null, offeredTo: null });
     say(`viagem ${ride.id} criada (${ride.category}, ${ride.price} MZN, ${q.period.label})`);
+    note('request', ride);
     const ack = { ok: true, ride: JSON.parse(JSON.stringify(ride)) };
     setImmediate(() => {
       try {
@@ -317,6 +336,7 @@ export function createRideService({
       d.busy = true;
       d.rideId = ride.id;
       ride.driver = publicDriver(d);
+      note('accepted', ride);
       setStatus(ride, 'accepted');
       io.to(ride.passengerId).emit('ride:driver_location', d.location);
     });
@@ -325,6 +345,7 @@ export function createRideService({
       const ride = offeredToMe(p);
       if (!ride) return;
       say(`motorista ${socket.id} recusou ${ride.id}`);
+      note('declined', ride);
       clearOffer(ride);
       offerNext(ride);
     });
@@ -437,6 +458,9 @@ export function createRideService({
     sweep,
     shutdown,
     demand,
+    nearestFree,
+    learning,
+    market,
     driverCount: () => drivers.size,
     rideCount: () => rides.size,
   };

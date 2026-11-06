@@ -21,9 +21,11 @@ type Props = {
   onSelect: (p: Place) => void;
   onClose: () => void;
   onUseCurrent?: () => void;
+  /** Fecha a pesquisa e deixa marcar o local arrastando o mapa. */
+  onPickOnMap?: () => void;
 };
 
-export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent }: Props) {
+export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent, onPickOnMap }: Props) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState('');
   // Resultado da última pesquisa concluída (para a consulta `q`)
@@ -95,6 +97,15 @@ export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent }: Pr
         <Pressable onPress={onUseCurrent} style={styles.item}>
           <Text style={{ fontSize: 20, marginRight: 12 }}>📍</Text>
           <Text style={styles.main}>Usar a minha localização</Text>
+        </Pressable>
+      )}
+      {onPickOnMap && (
+        <Pressable onPress={onPickOnMap} style={styles.item} accessibilityRole="button">
+          <Text style={{ fontSize: 20, marginRight: 12 }}>🗺️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.main}>Escolher no mapa</Text>
+            <Text style={styles.sec}>Arraste o mapa ou toque no local</Text>
+          </View>
         </Pressable>
       )}
       {error ? (

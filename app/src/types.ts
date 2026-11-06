@@ -27,7 +27,18 @@ export type Fare = {
   driverEarnings: number;
   platformFee: number;
   multiplier: number;
-  breakdown: { base: number; distance: number; time: number; surcharge: number };
+  breakdown: {
+    base: number;
+    distance: number;
+    time: number;
+    surcharge: number;
+    /** ida do motorista até à recolha */
+    pickup?: number;
+    /** complemento para o motorista atingir o ganho mínimo por hora */
+    guarantee?: number;
+    /** taxa de serviço fixa da plataforma */
+    serviceFee?: number;
+  };
 };
 
 export type PeriodId = 'normal' | 'ponta_manha' | 'ponta_tarde' | 'noite';
@@ -84,6 +95,9 @@ export type AckResult = { ok: true; ride: Ride } | { ok: false; error: string };
 export type PricingInfo = {
   fuel: { gasolina: number; gasoleo: number; fonte: string };
   platformFee: number;
+  serviceFee?: number;
+  /** lucro mínimo garantido ao motorista por hora de trabalho (MZN) */
+  driverMinHourly?: number;
   period: PricePeriod;
 };
 

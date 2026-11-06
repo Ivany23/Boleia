@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { io as connect } from 'socket.io-client';
 import { createServer } from '../src/server.js';
 import { createGoogle } from '../src/google.js';
+import { DEFAULT_PICKUP_M, priceFor } from '../src/pricing.js';
 
 let routeCalls = 0;
 const mockRoute = async (o, d) => {
@@ -239,8 +240,10 @@ test('REST: health, quote, erros', async () => {
   assert.equal(bad.status, 400);
   assert.equal(typeof (await bad.json()).error, 'string');
   const q = await (await post(JSON.stringify({ origin: BAIXA, destination: DEST }))).json();
-  assert.equal(q.prices.economico, 160);
-  assert.equal(q.fares.economico.total, 160);
+  // o preço usa a distância real do motorista livre mais próximo da recolha
+  const pk = srv.rides.nearestFree('economico', BAIXA) ?? DEFAULT_PICKUP_M;
+  assert.equal(q.prices.economico, priceFor('economico', 5000, 600, { pickupMeters: pk }));
+  assert.equal(q.fares.economico.total, q.prices.economico);
   assert.equal(typeof q.quoteId, 'string');
   assert.equal(q.period.id, 'normal');
   assert.equal((await post('{oops')).status, 400);
@@ -309,6 +312,66 @@ test('avaliação: só o passageiro, só uma vez, 1 a 5', async () => {
   assert.equal((await ack(pax, 'ride:rate', { rideId: r.ride.id, stars: 9 })).ok, false);
   assert.equal((await ack(pax, 'ride:rate', { rideId: r.ride.id, stars: 1 })).ok, true);
   assert.equal((await ack(pax, 'ride:rate', { rideId: r.ride.id, stars: 5 })).ok, false);
+});
+
+test('aprendizagem: o servidor regista cotações, pedidos e respostas', async () => {
+  const z = ZONE(10);
+  const d = await online('conforto', z);
+  const pax = await client();
+  const r = await ack(pax, 'ride:request', reqBody({ category: 'conforto', pickup: z }));
+  await until(() => d.log['ride:offer']?.[0]);
+  d.emit('ride:decline', { rideId: r.ride.id });
+  await waitStatus(pax, 'no_drivers');
+  const keys = [];
+  // a store guarda por zona e pela cidade inteira
+  for (const k of ['o', 'q']) {
+    const row = srv.rides.market.store.get(`${k}|*|normal${k === 'o' ? '|conforto' : ''}`);
+    keys.push(row);
+  }
+  assert.ok(keys[0].declined >= 1, 'recusa registada');
+  assert.ok(keys[1].requests >= 1, 'pedido registado');
+  const pr = await (await fetch(`http://127.0.0.1:${port}/api/pricing`)).json();
+  assert.equal(typeof pr.learning.conforto, 'number');
+});
+
+test('geocode reverso: valida coordenadas', async () => {
+  const bad = await fetch(`http://127.0.0.1:${port}/api/geocode/reverse?lat=abc&lng=1`);
+  assert.equal(bad.status, 400);
+});
+
+test('google.reverse: Places primeiro, OpenStreetMap como reserva, sem resposta -> "Ponto no mapa"', async () => {
+  const prev = process.env.GOOGLE_PLACES_API_KEY;
+  process.env.GOOGLE_PLACES_API_KEY = 'teste';
+  try {
+    let mode = 'places';
+    const fetchImpl = async (url) => {
+      if (url.includes('places.googleapis.com')) {
+        if (mode !== 'places') return { ok: true, json: async () => ({ places: [] }) };
+        return { ok: true, json: async () => ({ places: [{ displayName: { text: 'Shoprite' }, formattedAddress: 'Av. Acordos de Lusaka, Maputo' }] }) };
+      }
+      if (url.includes('nominatim')) {
+        if (mode === 'nada') return { ok: false, status: 500 };
+        if (mode === 'mar') return { ok: true, json: async () => ({ display_name: 'Moçambique', address: { country: 'Moçambique' } }) };
+        return { ok: true, json: async () => ({ address: { road: 'Av. 24 de Julho', suburb: 'Polana', city: 'Maputo' } }) };
+      }
+      throw new Error('inesperado ' + url);
+    };
+    const g = createGoogle({ fetchImpl });
+    assert.equal((await g.reverse({ lat: -25.95, lng: 32.59 })).address, 'Shoprite, Av. Acordos de Lusaka, Maputo');
+    mode = 'osm';
+    assert.equal((await g.reverse({ lat: -25.96, lng: 32.59 })).address, 'Av. 24 de Julho, Polana, Maputo');
+    mode = 'nada';
+    assert.equal((await g.reverse({ lat: -25.97, lng: 32.59 })).address, 'Ponto no mapa');
+    // no mar o OpenStreetMap só devolve o país: não serve como morada
+    mode = 'mar';
+    assert.equal((await g.reverse({ lat: -25.955, lng: 32.625 })).address, 'Ponto no mapa');
+    // cache: o mesmo ponto não volta a perguntar
+    mode = 'places';
+    assert.equal((await g.reverse({ lat: -25.97, lng: 32.59 })).address, 'Ponto no mapa');
+  } finally {
+    if (prev === undefined) delete process.env.GOOGLE_PLACES_API_KEY;
+    else process.env.GOOGLE_PLACES_API_KEY = prev;
+  }
 });
 
 test('google.route: com trânsito; se a Google recusar, recua sem trânsito', async () => {

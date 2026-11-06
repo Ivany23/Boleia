@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import MapView, { Polyline } from '../map';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getQuote } from '../api';
+import { getQuote, reverseGeocode } from '../api';
 import { CancelDialog } from '../components/CancelDialog';
 import {
   Avatar,
@@ -34,7 +34,6 @@ import {
 import { CarTop, VehicleBadge } from '../components/Vehicle';
 import { VehicleMarker } from '../components/VehicleMarker';
 import { ViewMarker } from '../components/ViewMarker';
-import { mapStyle } from '../mapStyle';
 import { notify, tap } from '../haptics';
 import { addressOf, currentPosition } from '../location';
 import { getSocket } from '../socket';
@@ -42,6 +41,7 @@ import { shadow, theme } from '../theme';
 import type { AckResult, Category, DriverPublic, LatLng, Payment, Place, Profile, Quote, Ride } from '../types';
 import {
   CATEGORIES,
+  MAPUTO,
   PAYMENTS,
   categoryLabel,
   cleanPath,
@@ -85,6 +85,11 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
   const [follow, setFollow] = useState(false);
   const [note, setNote] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
+  // "Escolher no mapa": pino fixo no centro, a pessoa arrasta o mapa ou toca no local
+  const [picking, setPicking] = useState<null | 'dropoff' | 'pickup'>(null);
+  const [pickCenter, setPickCenter] = useState<LatLng | null>(null);
+  const [pickPlace, setPickPlace] = useState<Place | null>(null);
+  const lastDelta = useRef(0.02);
   const quoteId = useRef(0);
 
   const setRideBoth = (r: Ride | null) => {
@@ -305,6 +310,43 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
     reset();
   }
 
+  // Morada do ponto escolhido no mapa (espera o mapa parar meio segundo)
+  useEffect(() => {
+    if (!picking || !pickCenter) return;
+    const c = pickCenter;
+    let alive = true;
+    const t = setTimeout(() => {
+      reverseGeocode(c)
+        .then((p) => alive && setPickPlace(p))
+        .catch(() => alive && setPickPlace({ ...c, address: 'Ponto no mapa' }));
+    }, 500);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [picking, pickCenter]);
+
+  function startPick(kind: 'dropoff' | 'pickup') {
+    setSearch(null);
+    const start = (kind === 'pickup' ? pickup : dropoff) ?? posRef.current ?? pickup ?? MAPUTO;
+    setPicking(kind);
+    setPickPlace(null);
+    setPickCenter({ lat: start.lat, lng: start.lng });
+    mapRef.current?.animateToRegion({ ...toRN(start), latitudeDelta: 0.008, longitudeDelta: 0.008 }, 400);
+  }
+
+  function confirmPick() {
+    if (!picking || !pickCenter) return;
+    const same = pickPlace && pickPlace.lat === pickCenter.lat && pickPlace.lng === pickCenter.lng;
+    const place: Place = same ? pickPlace : { ...pickCenter, address: 'Ponto no mapa' };
+    if (picking === 'dropoff') setDropoff(place);
+    else {
+      pickupCustom.current = true;
+      setPickup(place);
+    }
+    setPicking(null);
+  }
+
   async function useCurrentAsPickup() {
     setSearch(null);
     pickupCustom.current = false;
@@ -340,7 +382,6 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
         ref={mapRef}
         style={StyleSheet.absoluteFill}
         initialRegion={{ ...toRN(initial), latitudeDelta: 0.03, longitudeDelta: 0.03 }}
-        customMapStyle={mapStyle}
         showsUserLocation
         showsMyLocationButton={false}
         showsBuildings
@@ -348,6 +389,26 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
         toolbarEnabled={false}
         showsCompass={false}
         onPanDrag={() => follow && setFollow(false)}
+        onRegionChangeComplete={(r) => {
+          if (Number.isFinite(r?.latitudeDelta)) lastDelta.current = r.latitudeDelta;
+          if (picking && validPoint({ lat: r?.latitude, lng: r?.longitude })) {
+            // o mapa avisa "parou" mais do que uma vez no mesmo sítio: só conta se mudou
+            setPickCenter((prev) =>
+              prev && Math.abs(prev.lat - r.latitude) < 1e-6 && Math.abs(prev.lng - r.longitude) < 1e-6
+                ? prev
+                : { lat: r.latitude, lng: r.longitude },
+            );
+          }
+        }}
+        onPress={(e) => {
+          // a escolher no mapa: tocar leva o pino a esse local
+          const c = e?.nativeEvent?.coordinate;
+          if (!picking || !c) return;
+          mapRef.current?.animateToRegion(
+            { ...c, latitudeDelta: lastDelta.current, longitudeDelta: lastDelta.current },
+            300,
+          );
+        }}
       >
         {showNearby &&
           nearby.map((d) => <VehicleMarker key={d.id} point={d.location} category={d.category} size={22} />)}
@@ -379,7 +440,14 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
         )}
       </MapView>
 
-      {!ride && <MapButton icon="‹" label="Voltar" onPress={onExit} style={[styles.floating, { top: insets.top + 10 }]} />}
+      {!ride && (
+        <MapButton
+          icon="‹"
+          label="Voltar"
+          onPress={picking ? () => setPicking(null) : onExit}
+          style={[styles.floating, { top: insets.top + 10 }]}
+        />
+      )}
       {!ride && pos && (
         <MapButton
           icon="◎"
@@ -395,8 +463,47 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
         </View>
       )}
 
+      {/* Escolher no mapa: pino fixo no centro + morada + confirmar */}
+      {picking && (
+        <>
+          <View pointerEvents="none" style={styles.pickPinWrap}>
+            <View style={styles.pickPin}>
+              <View style={[styles.pickHead, { backgroundColor: picking === 'pickup' ? theme.primary : theme.accentDark }]}>
+                <View style={styles.pickDot} />
+              </View>
+              <View style={styles.pickStem} />
+              <View style={styles.pickShadow} />
+            </View>
+          </View>
+          <View pointerEvents="none" style={[styles.pickHint, { top: insets.top + 14 }]}>
+            <Text style={styles.pickHintText}>Arraste o mapa ou toque no local</Text>
+          </View>
+          <Sheet>
+            <Text style={common.muted}>{picking === 'pickup' ? 'Local de recolha' : 'Destino'}</Text>
+            <View style={[common.row, { gap: 10, minHeight: 44 }]}>
+              <Text style={{ fontSize: 20 }}>{picking === 'pickup' ? '🟢' : '🏁'}</Text>
+              {pickPlace && pickCenter && pickPlace.lat === pickCenter.lat && pickPlace.lng === pickCenter.lng ? (
+                <Text style={[common.h2, { flex: 1, fontSize: 16 }]} numberOfLines={2}>{pickPlace.address}</Text>
+              ) : (
+                <View style={[common.row, { gap: 8, flex: 1 }]}>
+                  <ActivityIndicator color={theme.primary} />
+                  <Text style={common.muted}>A procurar a morada…</Text>
+                </View>
+              )}
+            </View>
+            <Button
+              title={picking === 'pickup' ? 'Confirmar recolha' : 'Confirmar destino'}
+              variant="accent"
+              disabled={!pickCenter}
+              onPress={confirmPick}
+            />
+            <Button title="Cancelar" variant="ghost" onPress={() => setPicking(null)} />
+          </Sheet>
+        </>
+      )}
+
       {/* Sheets */}
-      {!ride && !dropoff && (
+      {!ride && !dropoff && !picking && (
         <Sheet>
           <Text style={common.h1}>Olá, {profile.name.split(' ')[0]} 👋</Text>
           <Pressable onPress={() => setSearch('dropoff')} style={[styles.where, shadow(1)]}>
@@ -415,7 +522,7 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
         </Sheet>
       )}
 
-      {!ride && dropoff && (
+      {!ride && dropoff && !picking && (
         <Sheet>
           <View style={common.row}>
             <View style={{ flex: 1 }}>
@@ -665,6 +772,7 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
           near={pos ?? undefined}
           onClose={() => setSearch(null)}
           onUseCurrent={search === 'pickup' ? useCurrentAsPickup : undefined}
+          onPickOnMap={() => startPick(search)}
           onSelect={(p) => {
             if (search === 'dropoff') setDropoff(p);
             else {
@@ -796,6 +904,25 @@ function SearchingPulse({ category }: { category: Category }) {
 
 const styles = StyleSheet.create({
   floating: { position: 'absolute', left: 16 },
+  // pino fixo no centro do ecrã: a ponta fica exactamente no centro do mapa
+  pickPinWrap: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  // altura do pino ≈ 53 (cabeça 34 + haste 16 + sombra 3); ponta a 50 px do topo.
+  // Centrado com marginBottom M, a ponta fica no centro quando M = 2 × 50 − 53 = 47.
+  pickPin: { alignItems: 'center', marginBottom: 47 },
+  pickHead: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+  },
+  pickDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
+  pickStem: { width: 3, height: 16, backgroundColor: theme.ink, borderRadius: 2 },
+  pickShadow: { width: 12, height: 4, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.25)', marginTop: -1 },
+  pickHint: { position: 'absolute', alignSelf: 'center', backgroundColor: theme.primaryDark, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  pickHintText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   floatingRight: { position: 'absolute', right: 16 },
   mapTools: { position: 'absolute', right: 16, gap: 10 },
   where: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, borderRadius: 18, backgroundColor: theme.card, paddingHorizontal: 10, borderWidth: 1, borderColor: theme.line },

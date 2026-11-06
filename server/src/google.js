@@ -32,14 +32,14 @@ const r4 = (n) => Number(n).toFixed(4);
 export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10000 } = {}) {
   const cache = new Map();
 
-  async function call(url, init, key, what) {
+  async function call(url, init, key, what, ms = timeoutMs) {
     if (!key) throw new HttpError(503, `Serviço ${what} não configurado no servidor.`);
     let res;
     try {
       res = await fetchImpl(url, {
         ...init,
         headers: { 'Content-Type': 'application/json', ...init.headers, 'X-Goog-Api-Key': key },
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(ms),
       });
     } catch {
       throw new HttpError(504, `Sem resposta do serviço ${what}. Tente novamente.`);
@@ -118,6 +118,8 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
       },
       process.env.GOOGLE_ROUTES_API_KEY,
       'de rotas',
+      // com trânsito espera menos, para a rota de reserva ainda caber no tempo da app (15 s)
+      traffic ? Math.min(timeoutMs, 6000) : timeoutMs,
     );
   }
 
@@ -157,5 +159,79 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
     return value;
   }
 
-  return { autocomplete, details, route };
+  // ---------------------------------------------------------------------
+  // Morada de um ponto (para "escolher no mapa").
+  // 1) Google Places "nearby" (o lugar conhecido mais próximo, até 120 m)
+  // 2) OpenStreetMap Nominatim (rua/bairro), no máximo 1 pedido por segundo
+  // 3) Sem resposta: "Ponto no mapa"
+  // ---------------------------------------------------------------------
+  const revCache = new Map();
+  let nominatimNext = 0;
+
+  async function nominatim(p) {
+    const wait = nominatimNext - now();
+    nominatimNext = Math.max(now(), nominatimNext) + 1100;
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=pt&lat=${p.lat}&lon=${p.lng}`;
+    const res = await fetchImpl(url, {
+      headers: { 'User-Agent': 'Boleia/1.0 (servidor da app Boleia, Maputo)' },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    const a = j?.address ?? {};
+    const street = [a.road ?? a.pedestrian ?? a.neighbourhood, a.house_number].filter(Boolean).join(' ');
+    const parts = [street, a.suburb ?? a.neighbourhood ?? a.city_district, a.city ?? a.town].filter(
+      (x, i, arr) => !!x && arr.indexOf(x) === i,
+    );
+    // Sem rua/bairro/cidade (ex.: no mar só vem "Moçambique"): não serve como morada
+    return parts.length ? parts.join(', ') : null;
+  }
+
+  async function reverse(p) {
+    const key = `${r4(p.lat)},${r4(p.lng)}`;
+    const hit = revCache.get(key);
+    if (hit && now() - hit.at < 24 * 3600 * 1000) return hit.value;
+    let address = null;
+    if (process.env.GOOGLE_PLACES_API_KEY) {
+      try {
+        const d = await call(
+          'https://places.googleapis.com/v1/places:searchNearby',
+          {
+            method: 'POST',
+            headers: { 'X-Goog-FieldMask': 'places.displayName,places.formattedAddress' },
+            body: JSON.stringify({
+              maxResultCount: 1,
+              rankPreference: 'DISTANCE',
+              languageCode: 'pt',
+              locationRestriction: { circle: { center: { latitude: p.lat, longitude: p.lng }, radius: 120 } },
+            }),
+          },
+          process.env.GOOGLE_PLACES_API_KEY,
+          'de pesquisa de locais',
+        );
+        const pl = d.places?.[0];
+        if (pl) {
+          const name = pl.displayName?.text;
+          const addr = pl.formattedAddress ?? '';
+          address = name && !addr.startsWith(name) ? `${name}, ${addr}` : addr || name || null;
+        }
+      } catch {
+        // tenta o OpenStreetMap
+      }
+    }
+    if (!address) {
+      try {
+        address = await nominatim(p);
+      } catch {
+        // sem morada
+      }
+    }
+    const value = { lat: p.lat, lng: p.lng, address: address || 'Ponto no mapa' };
+    revCache.set(key, { at: now(), value });
+    if (revCache.size > 5000) revCache.delete(revCache.keys().next().value);
+    return value;
+  }
+
+  return { autocomplete, details, route, reverse };
 }

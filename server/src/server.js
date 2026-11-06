@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { Server } from 'socket.io';
 import { createGoogle, HttpError } from './google.js';
+import { createMarket } from './market.js';
 import { pricingInfo } from './pricing.js';
 import { createQuoteService } from './quotes.js';
 import { createRideService, validLatLng } from './rides.js';
@@ -12,15 +13,20 @@ const num = (v) => (v === undefined || v === '' ? NaN : Number(v));
 export function createServer({
   google,
   route,
+  market,
   clock = () => new Date(),
   offerTimeoutMs = 15000,
   nearbyIntervalMs = 5000,
 } = {}) {
   const g = google ?? createGoogle();
+  const mk = market ?? createMarket({ clock });
   const quotes = createQuoteService({
     route: route ?? g.route,
     clock,
     demand: (category, point) => rides.demand(category, point),
+    learning: (category, point) => rides.learning(category, point),
+    pickup: (category, point) => rides.nearestFree(category, point),
+    onQuote: (point) => mk.record('quote', { point, date: clock() }),
   });
 
   const app = express();
@@ -39,7 +45,19 @@ export function createServer({
 
   app.get('/api/health', (req, res) => res.json({ ok: true, drivers: rides.driverCount() }));
 
-  app.get('/api/pricing', (req, res) => res.json(pricingInfo(clock())));
+  app.get('/api/pricing', (req, res) =>
+    res.json({ ...pricingInfo(clock()), learning: mk.snapshot(clock()) }),
+  );
+
+  // Nome/morada de um ponto marcado no mapa
+  app.get(
+    '/api/geocode/reverse',
+    h((req) => {
+      const p = { lat: num(req.query.lat), lng: num(req.query.lng) };
+      if (!validLatLng(p)) throw new HttpError(400, 'Coordenadas inválidas.');
+      return g.reverse(p);
+    }),
+  );
 
   app.get(
     '/api/places/autocomplete',
@@ -85,7 +103,7 @@ export function createServer({
 
   const httpServer = http.createServer(app);
   const io = new Server(httpServer, { cors: { origin: '*' } });
-  const rides = createRideService({ io, quotes, offerTimeoutMs, clock });
+  const rides = createRideService({ io, quotes, market: mk, offerTimeoutMs, clock });
   io.on('connection', (socket) => rides.attach(socket));
   const nearbyTimer = setInterval(() => rides.broadcastNearby(), nearbyIntervalMs);
   const sweepTimer = setInterval(() => rides.sweep(), 60 * 1000);

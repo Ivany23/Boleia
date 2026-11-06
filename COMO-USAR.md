@@ -49,31 +49,44 @@ RUN_LIVE=1 npm test      # inclui teste real com o Google (Git Bash)
 ```
 
 ## Preços (MZN), em server/src/pricing.js
-O preço é calculado a partir do **custo real** para o motorista: combustível (gasolina da ARENE, 93,69 MT/L desde 07/05/2026), desgaste do carro e tempo parado no trânsito. Soma-se um ganho justo para o motorista e, por cima, a comissão da plataforma (12%). O passageiro paga sempre o preço que viu, durante 5 minutos.
+O preço não é fixo: é calculado em cada pedido, por camadas.
 
-| Horário (Maputo) | Ajuste |
+| Camada | O que faz |
 |---|---|
-| Noite, 21h–05h (todos os dias) | +25% |
-| Ponta da tarde, 16h30–19h30 (seg–sex) | +20% |
-| Ponta da manhã, 06h–09h (seg–sex) | +15% |
-| Procura alta (mais pedidos que motoristas livres) | até +30% |
+| **Custo real** | Combustível (gasolina ARENE, 93,69 MT/L) e desgaste, por km; combustível parado no trânsito, por minuto |
+| **Distância e trânsito** | km e minutos reais da Google, com trânsito em tempo real |
+| **Ida até à recolha** | Distância real do motorista livre mais próximo (até 5 km pagos) |
+| **Garantia do motorista** | Nunca menos do que o custo real + ganho mínimo por hora: Moto 210, Económico 300, Conforto 390 MZN/hora |
+| **Horário** | Noite 21h–05h +25%; ponta 16h30–19h30 +20% e 06h–09h +15% (seg–sex), por cima da garantia |
+| **Procura na zona** | Maputo/Matola em zonas de ~2 km; até +30% quando faltam carros, a subir e descer devagar |
+| **Aprendizagem** | Se os motoristas recusam muito numa zona/horário, sobe (até +20%); se aceitam tudo e os passageiros desistem ao ver o preço, desce (até −10%). Guardada na base de dados |
+| **Plataforma** | Comissão de 12% + taxa de serviço de 10 MZN por viagem |
 
-Exemplos (tarifa normal / ponta da tarde / noite):
+Limites de protecção: o ajuste total fica entre 0,9× e 1,6× e o passageiro paga sempre o preço que viu, durante 5 minutos.
+
+Exemplos com o motorista a 1,5 km (tarifa normal / ponta da tarde / noite):
 
 | Viagem | Moto | Económico | Conforto |
 |---|---|---|---|
-| Curta, 3 km / 8 min | 55 / 65 / 70 | 120 / 140 / 150 | 185 / 220 / 230 |
-| Média, 5 km / 12 min | 75 / 90 / 95 | 165 / 195 / 205 | 250 / 300 / 310 |
-| Baixa → Matola, 15,6 km / 28 min | 180 / 215 / 220 | 390 / 470 / 485 | 575 / 685 / 715 |
+| Muito curta, 850 m / 4 min | 55 / 65 / 70 | 95 / 115 / 120 | 145 / 175 / 180 |
+| Curta, 2 km / 6 min | 70 / 85 / 85 | 120 / 140 / 145 | 180 / 215 / 225 |
+| Média, 5 km / 12 min | 115 / 135 / 140 | 195 / 235 / 245 | 270 / 320 / 335 |
+| 10 km / 20 min | 170 / 205 / 215 | 310 / 375 / 390 | 410 / 495 / 515 |
+| Baixa → Matola, 15,6 km / 28 min | 235 / 280 / 290 | 435 / 520 / 540 | 570 / 680 / 710 |
 
-**Quando a ARENE mudar o preço**, basta acrescentar ao `server/.env` (e reiniciar o servidor):
+**Para mudar valores**, basta acrescentar ao `server/.env` (ou às variáveis do Render) e reiniciar:
 ```
 FUEL_GASOLINA_MZN=93.69
 FUEL_GASOLEO_MZN=116.25
 FUEL_FONTE=ARENE, 07/05/2026
 PLATFORM_FEE=0.12
+SERVICE_FEE=10
+DRIVER_MIN_HOURLY=300
 ```
 Todos os preços se ajustam sozinhos. `ROUTES_TRAFFIC=0` desliga o trânsito em tempo real (fica mais barato na Google).
+
+## Escolher um local no mapa
+Na pesquisa de destino (ou de recolha), tocar em **🗺️ Escolher no mapa**. Aparece um pino fixo no centro: arraste o mapa ou toque no local, veja a morada e carregue em **Confirmar**.
 
 ## Durante a viagem
 - **Mapa sempre visível:** tocar na pega do painel ("▼ ver mapa") minimiza-o para uma linha.

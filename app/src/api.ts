@@ -19,7 +19,9 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 10000): 
     const res = await fetch(SERVER_URL + path, {
       ...init,
       signal: ctrl.signal,
-      headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+      // Content-Type só quando há corpo: num GET obrigaria o browser a um pedido
+      // de verificação (CORS) extra antes de cada consulta
+      headers: { ...(init?.body ? { 'Content-Type': 'application/json' } : {}), ...(init?.headers ?? {}) },
     });
     let body: any = null;
     try {
@@ -71,6 +73,13 @@ export async function getQuote(origin: LatLng, destination: LatLng): Promise<Quo
   );
   if (!q || !q.prices) throw new ApiError('Resposta inválida do servidor.');
   return { ...q, polyline: Array.isArray(q.polyline) ? q.polyline : [] };
+}
+
+/** Morada de um ponto do mapa (servidor: Google Places / OpenStreetMap). */
+export async function reverseGeocode(p: LatLng): Promise<Place> {
+  const q = new URLSearchParams({ lat: String(p.lat), lng: String(p.lng) });
+  const r = await request<Place>(`/api/geocode/reverse?${q.toString()}`, undefined, 12000);
+  return { lat: p.lat, lng: p.lng, address: (r && typeof r.address === 'string' && r.address) || 'Ponto no mapa' };
 }
 
 export async function getPricing(): Promise<PricingInfo | null> {

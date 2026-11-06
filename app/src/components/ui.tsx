@@ -241,7 +241,11 @@ export function FareDetails({ fare, perspective = 'passenger' }: { fare: Fare; p
     ['Distância (inclui combustível)', b.distance],
     ['Tempo (inclui trânsito)', b.time],
   ];
+  if (b.pickup) rows.push(['Ida do motorista até si', b.pickup]);
   if (b.surcharge > 0) rows.push([`Ajuste horário/procura (${pct(fare.multiplier)})`, b.surcharge]);
+  if (b.surcharge < 0) rows.push(['Desconto (pouca procura)', b.surcharge]);
+  if (b.guarantee) rows.push(['Garantia de ganho do motorista', b.guarantee]);
+  if (b.serviceFee) rows.push(['Taxa de serviço', b.serviceFee]);
   return (
     <View style={styles.fare}>
       {rows.map(([label, v]) => (
