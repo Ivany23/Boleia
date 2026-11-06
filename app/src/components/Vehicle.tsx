@@ -2,13 +2,14 @@ import React from 'react';
 import { View } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import type { Category } from '../types';
+import { theme } from '../theme';
 
 /**
  * Veículos vistos de cima (frente para cima). O "3D" vem da sombra projectada,
  * do gradiente lateral da carroçaria e dos reflexos no tejadilho e nos vidros.
  */
 const PALETTE: Record<Category, { light: string; mid: string; dark: string }> = {
-  economico: { light: '#FFE27A', mid: '#FFC629', dark: '#C79300' }, // amarelo táxi
+  economico: { light: '#F5C862', mid: '#E5A110', dark: '#9E6D02' }, // âmbar refinado
   conforto: { light: '#2FC07E', mid: '#0A7A4B', dark: '#04452A' }, // verde Boleia
   moto: { light: '#2FC07E', mid: '#0A7A4B', dark: '#04452A' },
 };
@@ -95,23 +96,39 @@ export function MotoTop({ width = 20 }: { width?: number }) {
   );
 }
 
-/** Ícone de categoria (veículo deitado dentro de um círculo, para listas). */
+/** Ícone de categoria: design limpo e monocromático. */
 export function VehicleBadge({ category, size = 48 }: { category: Category; size?: number }) {
+  const iconSize = size * 0.5;
   return (
     <View
       style={{
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: category === 'economico' ? '#FFF5D6' : '#E1F3E9',
+        backgroundColor: theme.primarySoft,
         alignItems: 'center',
         justifyContent: 'center',
-        overflow: 'hidden',
       }}
     >
-      <View style={{ transform: [{ rotate: '90deg' }] }}>
-        <CarTop category={category} width={size * 0.42} />
-      </View>
+      <Svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
+        {category === 'moto' ? (
+          <>
+            <Circle cx="5" cy="17" r="2.5" stroke={theme.primary} strokeWidth={1.8} />
+            <Circle cx="19" cy="17" r="2.5" stroke={theme.primary} strokeWidth={1.8} />
+            <Path d="M7.5 17h5l3-8h-4l-1.5 4H7.5" stroke={theme.primary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d="M16.5 9l2.5 8" stroke={theme.primary} strokeWidth={1.8} strokeLinecap="round" />
+            <Circle cx="15" cy="6" r="1.5" stroke={theme.primary} strokeWidth={1.8} />
+          </>
+        ) : (
+          <>
+            <Path d="M3 14h18v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3z" stroke={theme.primary} strokeWidth={1.8} strokeLinejoin="round" />
+            <Path d="M5 14l2-5h10l2 5" stroke={theme.primary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+            <Circle cx="7" cy="17" r="1.5" fill={theme.primary} />
+            <Circle cx="17" cy="17" r="1.5" fill={theme.primary} />
+            {category === 'conforto' && <Path d="M7 11h10" stroke={theme.primary} strokeWidth={1} strokeDasharray="2 2" />}
+          </>
+        )}
+      </Svg>
     </View>
   );
 }

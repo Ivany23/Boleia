@@ -5,6 +5,7 @@ import { tap } from '../haptics';
 import { shadow, theme } from '../theme';
 import type { Fare } from '../types';
 import { money, type Tag } from '../utils';
+import { Icon, type IconName } from './Icon';
 
 type BtnProps = {
   title: string;
@@ -17,12 +18,11 @@ type BtnProps = {
 export function Button({ title, onPress, variant = 'primary', disabled, style }: BtnProps) {
   const bg = {
     primary: theme.primary,
-    accent: theme.accent,
+    accent: theme.primary,
     ghost: 'transparent',
     danger: theme.dangerSoft,
   }[variant];
-  // texto do botão amarelo sempre escuro (legível também no modo nocturno)
-  const color = { primary: '#fff', accent: '#0E1B14', ghost: theme.primary, danger: theme.danger }[variant];
+  const color = { primary: '#fff', accent: '#fff', ghost: theme.primary, danger: theme.danger }[variant];
   return (
     <Pressable
       onPress={() => {
@@ -108,7 +108,7 @@ export function MapButton({
   active = false,
   style,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   onPress: () => void;
   active?: boolean;
@@ -131,7 +131,13 @@ export function MapButton({
         style,
       ]}
     >
-      <Text style={{ fontSize: 19, color: active ? '#fff' : theme.ink }}>{icon}</Text>
+      {typeof icon === 'string' && icon.length > 2 ? (
+        <Icon name={icon as IconName} size={18} color={active ? '#fff' : theme.ink} />
+      ) : typeof icon === 'string' ? (
+        <Text style={{ fontSize: 18, color: active ? '#fff' : theme.ink }}>{icon}</Text>
+      ) : (
+        icon
+      )}
     </Pressable>
   );
 }
@@ -192,7 +198,7 @@ export function ConnectionBanner({ connected }: { connected: boolean }) {
 export function DriverMarkerView({ category }: { category: string }) {
   return (
     <View style={[styles.marker, shadow(1)]}>
-      <Text style={{ fontSize: 18 }}>{category === 'moto' ? '🏍️' : '🚗'}</Text>
+      <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: theme.primary }} />
     </View>
   );
 }
@@ -219,14 +225,14 @@ const TONES = {
   accent: { bg: theme.accentSoft, fg: '#9A5A16' },
 };
 
-/** Etiquetas como "🌙 Tarifa nocturna +25%" ou "🚦 Trânsito intenso". */
+/** Etiquetas como "Tarifa nocturna +25%" ou "Trânsito intenso". */
 export function PriceTags({ tags }: { tags: Tag[] }) {
   if (!tags.length) return null;
   return (
     <View style={styles.tags}>
       {tags.map((t) => (
         <View key={t.key} style={[styles.tag, { backgroundColor: TONES[t.tone].bg }]}>
-          <Text style={{ fontSize: 12 }}>{t.icon}</Text>
+          <Icon name={t.icon as IconName} size={13} color={TONES[t.tone].fg} />
           <Text style={[styles.tagText, { color: TONES[t.tone].fg }]}>{t.text}</Text>
         </View>
       ))}
@@ -308,7 +314,7 @@ export function RoundButton({
 }
 
 /** Círculo com as iniciais do nome. */
-export function Avatar({ name, size = 52, emoji }: { name: string; size?: number; emoji?: string }) {
+export function Avatar({ name, size = 52 }: { name: string; size?: number }) {
   const initials =
     name
       .split(/\s+/)
@@ -319,18 +325,13 @@ export function Avatar({ name, size = 52, emoji }: { name: string; size?: number
   return (
     <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
       <Text style={{ fontSize: size * 0.36, fontWeight: '800', color: theme.primaryDark }}>{initials}</Text>
-      {emoji ? (
-        <View style={styles.avatarEmoji}>
-          <Text style={{ fontSize: 12 }}>{emoji}</Text>
-        </View>
-      ) : null}
     </View>
   );
 }
 
 export const common = StyleSheet.create({
-  h1: { fontSize: 21, fontWeight: '800', color: theme.ink, letterSpacing: -0.3 },
-  h2: { fontSize: 16, fontWeight: '700', color: theme.ink },
+  h1: { fontSize: 20, fontWeight: '700', color: theme.ink, letterSpacing: -0.3 },
+  h2: { fontSize: 16, fontWeight: '600', color: theme.ink },
   body: { fontSize: 14, color: theme.ink },
   muted: { fontSize: 12.5, color: theme.muted },
   row: { flexDirection: 'row', alignItems: 'center' },
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  btnText: { fontSize: 16, fontWeight: '700' },
+  btnText: { fontSize: 16, fontWeight: '600' },
   sheet: {
     position: 'absolute',
     left: 0,
@@ -362,9 +363,9 @@ const styles = StyleSheet.create({
   grabArea: { alignSelf: 'center', alignItems: 'center', gap: 2, paddingHorizontal: 20 },
   grabHint: { fontSize: 11, fontWeight: '700', color: theme.muted },
   mapBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',

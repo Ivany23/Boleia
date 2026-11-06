@@ -3,9 +3,9 @@ import type { Category, LatLng, Payment, PricePeriod, Traffic } from './types';
 export const MAPUTO: LatLng = { lat: -25.9692, lng: 32.5732 };
 
 export const CATEGORIES: { id: Category; label: string; icon: string; desc: string }[] = [
-  { id: 'moto', label: 'Moto', icon: '🏍️', desc: 'Rápida e barata' },
-  { id: 'economico', label: 'Económico', icon: '🚗', desc: 'Carro para o dia a dia' },
-  { id: 'conforto', label: 'Conforto', icon: '🚙', desc: 'Mais espaço e conforto' },
+  { id: 'moto', label: 'Moto', icon: 'motorcycle', desc: 'Rápida e económica' },
+  { id: 'economico', label: 'Económico', icon: 'car', desc: 'Carro para o dia a dia' },
+  { id: 'conforto', label: 'Conforto', icon: 'car', desc: 'Mais espaço e conforto' },
 ];
 
 export const PAYMENTS: { id: Payment; label: string; note?: string }[] = [
@@ -61,14 +61,14 @@ export function priceTags(p: { period?: PricePeriod; traffic?: Traffic; highDema
   if (p.period && p.period.multiplier > 1) {
     tags.push({
       key: 'period',
-      icon: p.period.id === 'noite' ? '🌙' : '⏰',
+      icon: p.period.id === 'noite' ? 'moon' : 'clock',
       text: `${p.period.label} ${pct(p.period.multiplier)}`,
       tone: p.period.id === 'noite' ? 'night' : 'warn',
     });
   }
-  if (p.traffic === 'intenso') tags.push({ key: 'traffic', icon: '🚦', text: 'Trânsito intenso', tone: 'warn' });
-  else if (p.traffic === 'moderado') tags.push({ key: 'traffic', icon: '🚗', text: 'Trânsito moderado', tone: 'warn' });
-  if (p.highDemand) tags.push({ key: 'demand', icon: '⚡', text: 'Procura alta', tone: 'accent' });
+  if (p.traffic === 'intenso') tags.push({ key: 'traffic', icon: 'traffic', text: 'Trânsito intenso', tone: 'warn' });
+  else if (p.traffic === 'moderado') tags.push({ key: 'traffic', icon: 'car', text: 'Trânsito moderado', tone: 'warn' });
+  if (p.highDemand) tags.push({ key: 'demand', icon: 'bolt', text: 'Procura alta', tone: 'accent' });
   return tags;
 }
 

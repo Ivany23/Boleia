@@ -15,6 +15,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Logo } from '../components/Logo';
 import { Button, common } from '../components/ui';
 import { CarTop, VehicleBadge } from '../components/Vehicle';
+import { Icon } from '../components/Icon';
 import { tap } from '../haptics';
 import { getPermission } from '../location';
 import { shadow, theme } from '../theme';
@@ -83,7 +84,7 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
           <Logo size={42} light />
           <Text style={styles.tagline}>A sua boleia em Maputo e Matola.{'\n'}Preço justo, sem surpresas.</Text>
           <View style={styles.heroCar}>
-            <CarTop category="economico" width={30} />
+            <CarTop category="economico" width={22} />
           </View>
         </View>
 
@@ -94,7 +95,7 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
               subtitle="Pedir uma boleia"
               active={!isDriver}
               onPress={() => setRole('passenger')}
-              icon={<Text style={{ fontSize: 28 }}>🙋</Text>}
+              icon={<Icon name="person" size={26} color={!isDriver ? '#fff' : theme.ink} />}
             />
             <RoleCard
               title="Motorista"
@@ -170,7 +171,7 @@ export function StartScreen({ onStart, initial }: { onStart: (p: Profile) => voi
           </View>
 
           <View style={[common.row, { gap: 10 }]}>
-            <Text style={{ fontSize: 18 }}>📍</Text>
+            <Icon name="location" size={18} color={theme.primary} />
             <Text style={[common.muted, { flex: 1 }]}>
               Usamos a sua localização para mostrar motoristas perto de si e o percurso da viagem.
             </Text>
@@ -231,7 +232,7 @@ function RoleCard({
       <Text style={[styles.roleSub, active && { color: '#CFEBDC' }]}>{subtitle}</Text>
       {active && (
         <View style={styles.check}>
-          <Text style={{ color: theme.primaryDark, fontWeight: '900', fontSize: 12 }}>✓</Text>
+          <Icon name="check" size={12} color={theme.primaryDark} />
         </View>
       )}
     </Pressable>
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
     gap: 12,
     overflow: 'hidden',
   },
-  tagline: { color: '#E1F3E9', fontSize: 16, lineHeight: 23, fontWeight: '600' },
+  tagline: { color: '#E1F3E9', fontSize: 15, lineHeight: 22, fontWeight: '500' },
   heroCar: { position: 'absolute', right: 70, bottom: 58, transform: [{ rotate: '-62deg' }] },
   role: {
     flex: 1,
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   roleOn: { backgroundColor: theme.primary },
-  roleText: { fontSize: 17, fontWeight: '800', color: theme.ink },
+  roleText: { fontSize: 16, fontWeight: '600', color: theme.ink },
   roleSub: { fontSize: 12, color: theme.muted },
   check: {
     position: 'absolute',
@@ -274,10 +275,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { fontSize: 13, fontWeight: '700', color: theme.muted },
+  label: { fontSize: 13, fontWeight: '600', color: theme.muted },
   phoneRow: { flexDirection: 'row', gap: 8 },
   phonePrefix: { minHeight: 48, borderRadius: 12, backgroundColor: theme.bg, paddingHorizontal: 12, justifyContent: 'center' },
-  phonePrefixText: { fontSize: 16, fontWeight: '700', color: theme.ink },
+  phonePrefixText: { fontSize: 16, fontWeight: '600', color: theme.ink },
   input: { minHeight: 48, borderRadius: 12, backgroundColor: theme.bg, paddingHorizontal: 14, fontSize: 15, color: theme.ink },
   chip: {
     flex: 1,
@@ -291,5 +292,5 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   chipOn: { borderColor: theme.primary, backgroundColor: theme.primarySoft },
-  chipText: { fontSize: 13, fontWeight: '700', color: theme.ink },
+  chipText: { fontSize: 13, fontWeight: '600', color: theme.ink },
 });

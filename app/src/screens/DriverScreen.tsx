@@ -24,6 +24,7 @@ import { currentPosition } from '../location';
 import { getSocket } from '../socket';
 import { darkMapStyle } from '../mapDark';
 import { isDark, theme } from '../theme';
+import { Icon } from '../components/Icon';
 import type { LatLng, PricingInfo, Profile, Ride, RideOffer } from '../types';
 import {
   MAPUTO,
@@ -349,11 +350,11 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
       </MapView>
 
       {!ride && (
-        <MapButton icon="☰" label="Menu" onPress={onMenu} style={[styles.back, { top: insets.top + 10 }]} />
+        <MapButton icon="menu" label="Menu" onPress={onMenu} style={[styles.back, { top: insets.top + 10 }]} />
       )}
       {!ride && (
         <MapButton
-          icon="◎"
+          icon="my-location"
           label="A minha posição"
           onPress={() => mapRef.current?.animateToRegion({ ...toRN(posRef.current), latitudeDelta: 0.02, longitudeDelta: 0.02 }, 400)}
           style={[styles.backRight, { top: insets.top + 10 }]}
@@ -361,8 +362,8 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
       )}
       {live && (
         <View style={[styles.mapTools, { top: insets.top + 10 }]}>
-          <MapButton icon="🧭" label="Modo navegação 3D" active={follow} onPress={() => setFollow((f) => !f)} />
-          <MapButton icon="⤢" label="Ver o percurso todo" onPress={overview} />
+          <MapButton icon="compass" label="Modo navegação 3D" active={follow} onPress={() => setFollow((f) => !f)} />
+          <MapButton icon="expand" label="Ver o percurso todo" onPress={overview} />
         </View>
       )}
 
@@ -394,7 +395,7 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
 
           {pricing && period && (
             <View style={[styles.period, period.multiplier > 1 ? styles.periodHot : null]}>
-              <Text style={{ fontSize: 22 }}>{period.id === 'noite' ? '🌙' : period.multiplier > 1 ? '⏰' : '☀️'}</Text>
+              <Icon name={period.id === 'noite' ? 'moon' : period.multiplier > 1 ? 'clock' : 'sun'} size={20} color={period.multiplier > 1 ? theme.warn : theme.muted} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.periodTitle}>
                   {period.label}
@@ -452,13 +453,13 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
           </View>
           {ride.note ? (
             <View style={styles.note}>
-              <Text style={{ fontSize: 14 }}>📝</Text>
+              <Icon name="note" size={16} color={theme.muted} />
               <Text style={[common.body, { flex: 1 }]}>{ride.note}</Text>
             </View>
           ) : null}
           <View style={{ gap: 4 }}>
-            <Text style={common.body} numberOfLines={1}>📍 {ride.pickup?.address}</Text>
-            <Text style={common.body} numberOfLines={1}>🏁 {ride.dropoff?.address}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="location" size={14} color={theme.primary} /><Text style={[common.body, { flex: 1 }]} numberOfLines={1}>{ride.pickup?.address}</Text></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="flag" size={14} color={theme.accentDark} /><Text style={[common.body, { flex: 1 }]} numberOfLines={1}>{ride.dropoff?.address}</Text></View>
           </View>
           <Text style={common.muted}>
             Cobrar ao passageiro: {money(ride.price)} · {formatDistance(ride.distanceMeters)}
@@ -475,7 +476,10 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
 
       {ride?.status === 'completed' && (
         <Sheet>
-          <Text style={[common.h1, { textAlign: 'center' }]}>Viagem concluída ✅</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+            <Icon name="check" size={22} color={theme.primary} />
+            <Text style={[common.h1, { textAlign: 'center' }]}>Viagem concluída</Text>
+          </View>
           <Text style={[common.muted, { textAlign: 'center' }]}>Cobre ao passageiro</Text>
           <Text style={styles.bigPrice}>{money(ride.price)}</Text>
           <Text style={[common.muted, { textAlign: 'center' }]}>
@@ -489,7 +493,9 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
 
       {ride?.status === 'cancelled' && (
         <Sheet>
-          <Text style={{ fontSize: 34, textAlign: 'center' }}>🚫</Text>
+          <View style={{ alignItems: 'center', paddingVertical: 6 }}>
+            <Icon name="ban" size={32} color={theme.danger} />
+          </View>
           <Text style={[common.h2, { textAlign: 'center' }]}>
             {ride.cancelledBy === 'passenger' ? 'O passageiro cancelou a viagem' : 'Viagem cancelada'}
           </Text>
@@ -529,11 +535,13 @@ export function DriverScreen({ profile, onMenu }: { profile: Profile; onMenu: ()
                   {formatDistance(offer?.pickupDistanceMeters)} até à recolha · viagem de {formatDistance(offerRide.distanceMeters)} (
                   {formatDuration(offerRide.durationSeconds)})
                 </Text>
-                <Text style={common.body} numberOfLines={2}>📍 {offerRide.pickup?.address}</Text>
-                <Text style={common.body} numberOfLines={2}>🏁 {offerRide.dropoff?.address}</Text>
+                <View style={{ gap: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="location" size={14} color={theme.primary} /><Text style={[common.body, { flex: 1 }]} numberOfLines={2}>{offerRide.pickup?.address}</Text></View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="flag" size={14} color={theme.accentDark} /><Text style={[common.body, { flex: 1 }]} numberOfLines={2}>{offerRide.dropoff?.address}</Text></View>
+                </View>
                 {offerRide.note ? (
                   <View style={styles.note}>
-                    <Text style={{ fontSize: 14 }}>📝</Text>
+                    <Icon name="note" size={16} color={theme.muted} />
                     <Text style={[common.body, { flex: 1 }]}>{offerRide.note}</Text>
                   </View>
                 ) : null}

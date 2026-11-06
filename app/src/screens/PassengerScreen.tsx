@@ -33,6 +33,7 @@ import {
 import { CarTop, VehicleBadge } from '../components/Vehicle';
 import { VehicleMarker } from '../components/VehicleMarker';
 import { ViewMarker } from '../components/ViewMarker';
+import { Icon } from '../components/Icon';
 import { notify, tap } from '../haptics';
 import { addressOf, currentPosition } from '../location';
 import { getSocket } from '../socket';
@@ -440,7 +441,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
 
       {!ride && (
         <MapButton
-          icon={picking ? '‹' : '☰'}
+          icon={picking ? 'back' : 'menu'}
           label={picking ? 'Voltar' : 'Menu'}
           onPress={picking ? () => setPicking(null) : onMenu}
           style={[styles.floating, { top: insets.top + 10 }]}
@@ -448,7 +449,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
       )}
       {!ride && pos && (
         <MapButton
-          icon="◎"
+          icon="my-location"
           label="A minha posição"
           onPress={() => mapRef.current?.animateToRegion({ ...toRN(pos), latitudeDelta: 0.02, longitudeDelta: 0.02 }, 400)}
           style={[styles.floatingRight, { top: insets.top + 10 }]}
@@ -456,8 +457,8 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
       )}
       {active && (
         <View style={[styles.mapTools, { top: insets.top + 10 }]}>
-          <MapButton icon="🧭" label="Seguir o motorista em 3D" active={follow} onPress={() => setFollow((f) => !f)} />
-          <MapButton icon="⤢" label="Ver o percurso todo" onPress={overview} />
+          <MapButton icon="compass" label="Seguir o motorista em 3D" active={follow} onPress={() => setFollow((f) => !f)} />
+          <MapButton icon="expand" label="Ver o percurso todo" onPress={overview} />
         </View>
       )}
 
@@ -479,7 +480,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
           <Sheet>
             <Text style={common.muted}>{picking === 'pickup' ? 'Local de recolha' : 'Destino'}</Text>
             <View style={[common.row, { gap: 10, minHeight: 44 }]}>
-              <Text style={{ fontSize: 20 }}>{picking === 'pickup' ? '🟢' : '🏁'}</Text>
+              <Icon name={picking === 'pickup' ? 'location' : 'flag'} size={20} color={picking === 'pickup' ? theme.primary : theme.accentDark} />
               {pickPlace && pickCenter && pickPlace.lat === pickCenter.lat && pickPlace.lng === pickCenter.lng ? (
                 <Text style={[common.h2, { flex: 1, fontSize: 16 }]} numberOfLines={2}>{pickPlace.address}</Text>
               ) : (
@@ -503,9 +504,9 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
       {/* Sheets */}
       {!ride && !dropoff && !picking && (
         <Sheet>
-          <Text style={styles.hello}>Olá, {profile.name.split(' ')[0]} 👋</Text>
+          <Text style={styles.hello}>Olá, {profile.name.split(' ')[0]}</Text>
           <Pressable onPress={() => setSearch('dropoff')} style={styles.where} accessibilityRole="search">
-            <Text style={{ fontSize: 15 }}>🔍</Text>
+            <Icon name="search" size={17} color={theme.muted} />
             <Text style={styles.whereText}>Para onde vamos?</Text>
           </Pressable>
           <Pressable onPress={() => setSearch('pickup')} style={[common.row, styles.pickupMini]}>
@@ -518,7 +519,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
           <View style={[common.row, { gap: 6 }]}>
             <View style={[styles.dotLive, { backgroundColor: nearby.length ? theme.primaryLight : theme.line }]} />
             <Text style={common.muted}>
-              {nearby.length > 0 ? `${nearby.length} motorista(s) perto de si` : 'Nenhum motorista visível por agora'}
+              {nearby.length > 0 ? `${nearby.length} motorista(s) por perto` : 'Nenhum motorista visível por agora'}
             </Text>
           </View>
         </Sheet>
@@ -638,7 +639,10 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
                   );
                 })}
                 <Pressable onPress={() => setNoteOpen(true)} style={[styles.chip, note ? styles.chipNote : null]}>
-                  <Text style={styles.chipText} numberOfLines={1}>✏️ {note ? 'Nota ✓' : 'Nota'}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <Icon name="pencil" size={13} color={theme.ink} />
+                    <Text style={styles.chipText} numberOfLines={1}>{note ? 'Nota ✓' : 'Nota'}</Text>
+                  </View>
                 </Pressable>
               </View>
               {requestError ? <ErrorNote text={requestError} /> : null}
@@ -677,7 +681,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
         >
           <View style={styles.statusRow}>
             <Text style={[common.h2, { color: theme.primary, flex: 1 }]}>{statusTitle(ride, driverLoc)}</Text>
-            {ride.status === 'arrived' && <Text style={{ fontSize: 22 }}>📍</Text>}
+            {ride.status === 'arrived' && <Icon name="location" size={20} color={theme.primary} />}
           </View>
           {progress !== null && (
             <View style={{ gap: 4 }}>
@@ -687,7 +691,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
           )}
           {ride.driver ? (
             <View style={[common.row, styles.driverCard]}>
-              <Avatar name={ride.driver.name} emoji={ride.driver.category === 'moto' ? '🏍️' : '🚗'} />
+              <Avatar name={ride.driver.name} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={common.h2} numberOfLines={1}>{ride.driver.name}</Text>
                 <Text style={common.muted} numberOfLines={1}>
@@ -700,8 +704,8 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
             </View>
           ) : null}
           <View style={{ gap: 4 }}>
-            <Text style={common.body} numberOfLines={1}>📍 {ride.pickup?.address}</Text>
-            <Text style={common.body} numberOfLines={1}>🏁 {ride.dropoff?.address}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="location" size={14} color={theme.primary} /><Text style={[common.body, { flex: 1 }]} numberOfLines={1}>{ride.pickup?.address}</Text></View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="flag" size={14} color={theme.accentDark} /><Text style={[common.body, { flex: 1 }]} numberOfLines={1}>{ride.dropoff?.address}</Text></View>
           </View>
           <View style={[common.row, { justifyContent: 'space-between' }]}>
             <Text style={common.muted}>
@@ -718,7 +722,10 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
 
       {ride && ride.status === 'completed' && (
         <Sheet>
-          <Text style={[common.h1, { textAlign: 'center' }]}>Chegou ao destino 🎉</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
+            <Icon name="check" size={22} color={theme.primary} />
+            <Text style={[common.h1, { textAlign: 'center' }]}>Chegou ao destino</Text>
+          </View>
           <Text style={styles.bigPrice}>{money(ride.price)}</Text>
           <Text style={[common.muted, { textAlign: 'center' }]}>
             {formatDistance(ride.distanceMeters)} · {formatDuration(ride.durationSeconds)} ·{' '}
@@ -726,7 +733,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
           </Text>
           {ride.fare && <FareDetails fare={ride.fare} />}
           <View style={styles.rateBox}>
-            <Text style={[common.body, { textAlign: 'center', fontWeight: '700' }]}>
+            <Text style={[common.body, { textAlign: 'center', fontWeight: '600' }]}>
               Quer avaliar {ride.driver?.name?.split(' ')[0] ?? 'o motorista'}?
             </Text>
             <Text style={[common.muted, { textAlign: 'center' }]}>É opcional. Ajuda a manter bons motoristas na Boleia.</Text>
@@ -742,7 +749,9 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
 
       {ride && ride.status === 'no_drivers' && (
         <Sheet>
-          <Text style={{ fontSize: 34, textAlign: 'center' }}>😕</Text>
+          <View style={{ alignItems: 'center', paddingVertical: 6 }}>
+            <Icon name="sad" size={32} color={theme.muted} />
+          </View>
           <Text style={[common.h2, { textAlign: 'center' }]}>Sem motoristas disponíveis</Text>
           <Text style={[common.muted, { textAlign: 'center' }]}>
             Nenhum motorista aceitou o pedido. Tente outra vez dentro de instantes.
@@ -760,7 +769,9 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
 
       {ride && ride.status === 'cancelled' && (
         <Sheet>
-          <Text style={{ fontSize: 34, textAlign: 'center' }}>🚫</Text>
+          <View style={{ alignItems: 'center', paddingVertical: 6 }}>
+            <Icon name="ban" size={32} color={theme.danger} />
+          </View>
           <Text style={[common.h2, { textAlign: 'center' }]}>
             {ride.cancelledBy === 'driver' ? 'O motorista cancelou a viagem' : 'Viagem cancelada'}
           </Text>
@@ -932,10 +943,10 @@ const styles = StyleSheet.create({
   pickHintText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   floatingRight: { position: 'absolute', right: 16 },
   mapTools: { position: 'absolute', right: 16, gap: 10 },
-  hello: { fontSize: 18, fontWeight: '800', color: theme.ink },
-  where: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, borderRadius: 14, backgroundColor: theme.bg, paddingHorizontal: 14 },
+  hello: { fontSize: 17, fontWeight: '600', color: theme.ink },
+  where: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46, borderRadius: 14, backgroundColor: theme.bg, paddingHorizontal: 14 },
   pickupMini: { gap: 8, minHeight: 28 },
-  linkSmall: { color: theme.primary, fontWeight: '700', fontSize: 12.5, textAlign: 'center' },
+  linkSmall: { color: theme.primary, fontWeight: '600', fontSize: 12.5, textAlign: 'center' },
   // cartão recolha -> destino
   route: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: theme.bg, borderRadius: 14, paddingVertical: 10, paddingLeft: 12, paddingRight: 4 },
   routeRail: { alignItems: 'center', width: 12 },
@@ -945,18 +956,18 @@ const styles = StyleSheet.create({
   routeSep: { height: 1, backgroundColor: theme.line },
   routeMeta: { fontSize: 11.5, color: theme.muted, textAlign: 'right', lineHeight: 15 },
   cats: { flexDirection: 'row', gap: 8 },
-  catName: { fontSize: 13.5, fontWeight: '700', color: theme.ink },
-  catDesc: { fontSize: 12, color: theme.muted },
-  catPrice: { fontSize: 14, fontWeight: '800', color: theme.ink },
-  chip: { minHeight: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' },
+  catName: { fontSize: 13, fontWeight: '600', color: theme.ink },
+  catDesc: { fontSize: 11.5, color: theme.muted },
+  catPrice: { fontSize: 13.5, fontWeight: '700', color: theme.ink },
+  chip: { minHeight: 32, borderRadius: 999, paddingHorizontal: 12, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' },
   chipOn: { backgroundColor: theme.primary },
   chipNote: { backgroundColor: theme.accentSoft },
-  chipText: { fontSize: 12.5, fontWeight: '700', color: theme.ink },
-  noteBg: { flex: 1, backgroundColor: 'rgba(6,33,15,0.45)', paddingHorizontal: 16 },
-  noteCard: { backgroundColor: theme.card, borderRadius: 22, padding: 18, gap: 10 },
-  noteInput: { minHeight: 80, maxHeight: 140, borderRadius: 14, backgroundColor: theme.bg, padding: 12, fontSize: 16, color: theme.ink, textAlignVertical: 'top' },
-  whereText: { fontSize: 16, fontWeight: '700', color: theme.ink },
-  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.primary },
+  chipText: { fontSize: 12, fontWeight: '600', color: theme.ink },
+  noteBg: { flex: 1, backgroundColor: theme.overlay, paddingHorizontal: 16 },
+  noteCard: { backgroundColor: theme.card, borderRadius: 20, padding: 18, gap: 10 },
+  noteInput: { minHeight: 80, maxHeight: 140, borderRadius: 12, backgroundColor: theme.bg, padding: 12, fontSize: 15, color: theme.ink, textAlignVertical: 'top' },
+  whereText: { fontSize: 15, fontWeight: '500', color: theme.muted },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
   dotLive: { width: 8, height: 8, borderRadius: 4 },
   x: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   cat: {
@@ -983,8 +994,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  plateText: { fontSize: 13, fontWeight: '900', letterSpacing: 1.2, color: theme.ink },
-  bigPrice: { fontSize: 36, fontWeight: '900', color: theme.primary, textAlign: 'center' },
+  plateText: { fontSize: 12.5, fontWeight: '700', letterSpacing: 1.2, color: theme.ink },
+  bigPrice: { fontSize: 32, fontWeight: '800', color: theme.primary, textAlign: 'center' },
   pulse: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: theme.accent },
   pulseCore: { width: 64, height: 64, borderRadius: 32, backgroundColor: theme.accentSoft, alignItems: 'center', justifyContent: 'center' },
   toast: { position: 'absolute', left: 16, right: 16 },

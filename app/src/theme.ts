@@ -1,51 +1,55 @@
 import { Platform } from 'react-native';
 
-/** Identidade Boleia: verde (confiança) + amarelo (táxi, energia). */
+/** Identidade Boleia: verde profissional + grafite + âmbar refinado + azul para localização. */
 const LIGHT = {
   primary: '#0A7A4B',
-  primaryDark: '#06512F',
+  primaryDark: '#075232',
   primaryLight: '#14A363',
-  primarySoft: '#E1F3E9',
-  accent: '#FFC629',
-  accentDark: '#D9A100',
-  accentSoft: '#FFF5D6',
+  primarySoft: '#E8F5EE',
+  accent: '#E5A110', // âmbar refinado para pequenos detalhes
+  accentDark: '#BD8205',
+  accentSoft: '#FFF6E0',
+  info: '#2563EB', // azul para localização e informação
+  infoSoft: '#EFF6FF',
   night: '#2E3A6B',
   nightSoft: '#E3E7F6',
   warn: '#A86A00',
   warnSoft: '#FFF0CC',
-  bg: '#F4F7F5',
+  bg: '#F5F7F6',
   card: '#FFFFFF',
-  ink: '#0E1B14',
-  muted: '#5F6F66',
-  line: '#E1E8E3',
+  ink: '#18241E', // grafite escuro elegante para textos e cabeçalhos
+  muted: '#62736A',
+  line: '#E2E8E4',
   danger: '#C8452F',
   dangerSoft: '#F9E1DC',
-  overlay: 'rgba(6,33,15,0.45)',
-  radius: 20,
+  overlay: 'rgba(15,28,21,0.45)',
+  radius: 16,
 };
 
-/** Modo nocturno: fundos escuros esverdeados, mesmo verde/amarelo da marca. */
+/** Modo nocturno: fundos grafite/escuros com toques refinados. */
 const DARK: typeof LIGHT = {
   primary: '#1FAF6B',
   primaryDark: '#5FD39A',
   primaryLight: '#2BC47D',
-  primarySoft: '#123526',
-  accent: '#FFC629',
-  accentDark: '#E9B10F',
-  accentSoft: '#3A3013',
+  primarySoft: '#132F23',
+  accent: '#F2B024',
+  accentDark: '#C98C0A',
+  accentSoft: '#33270E',
+  info: '#3B82F6',
+  infoSoft: '#172554',
   night: '#AEB9F0',
   nightSoft: '#232A47',
   warn: '#F2C14E',
   warnSoft: '#3A2F12',
-  bg: '#141B17',
-  card: '#1C2520',
-  ink: '#EEF4F0',
-  muted: '#9AAAA2',
-  line: '#2C3832',
+  bg: '#121815',
+  card: '#1A231F',
+  ink: '#EDF4F0',
+  muted: '#8E9E96',
+  line: '#28342E',
   danger: '#FF7A63',
   dangerSoft: '#3A1E19',
   overlay: 'rgba(0,0,0,0.6)',
-  radius: 20,
+  radius: 16,
 };
 
 export type ThemeMode = 'light' | 'dark';

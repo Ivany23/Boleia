@@ -50,7 +50,7 @@ export function CancelDialog({
                   style={[styles.reason, on && styles.reasonOn]}
                 >
                   <View style={[styles.radio, on && styles.radioOn]}>{on && <View style={styles.radioDot} />}</View>
-                  <Text style={[common.body, on && { fontWeight: '700' }]}>{r}</Text>
+                  <Text style={[common.body, on && { fontWeight: '600' }]}>{r}</Text>
                 </Pressable>
               );
             })}
@@ -77,7 +77,7 @@ export function CancelDialog({
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: theme.overlay, justifyContent: 'flex-end' },
-  card: { backgroundColor: theme.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, gap: 12 },
+  card: { backgroundColor: theme.card, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, gap: 12 },
   grab: { alignSelf: 'center', width: 42, height: 5, borderRadius: 3, backgroundColor: theme.line },
   reason: {
     flexDirection: 'row',

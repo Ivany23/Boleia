@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { autocomplete, placeDetails } from '../api';
 import { ErrorNote } from '../components/ui';
+import { Icon } from '../components/Icon';
 import { theme } from '../theme';
 import type { LatLng, Place, Suggestion } from '../types';
 import { newSession } from '../utils';
@@ -95,13 +96,17 @@ export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent, onPi
       </View>
       {onUseCurrent && (
         <Pressable onPress={onUseCurrent} style={styles.item}>
-          <Text style={{ fontSize: 20, marginRight: 12 }}>📍</Text>
+          <View style={styles.iconBox}>
+            <Icon name="my-location" size={18} color={theme.primary} />
+          </View>
           <Text style={styles.main}>Usar a minha localização</Text>
         </Pressable>
       )}
       {onPickOnMap && (
         <Pressable onPress={onPickOnMap} style={styles.item} accessibilityRole="button">
-          <Text style={{ fontSize: 20, marginRight: 12 }}>🗺️</Text>
+          <View style={styles.iconBox}>
+            <Icon name="map" size={18} color={theme.primary} />
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.main}>Escolher no mapa</Text>
             <Text style={styles.sec}>Arraste o mapa ou toque no local</Text>
@@ -124,7 +129,9 @@ export function PlaceSearch({ title, near, onSelect, onClose, onUseCurrent, onPi
         }
         renderItem={({ item }) => (
           <Pressable onPress={() => pick(item)} style={styles.item}>
-            <Text style={{ fontSize: 20, marginRight: 12 }}>📌</Text>
+            <View style={styles.iconBox}>
+              <Icon name="location" size={16} color={theme.muted} />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.main} numberOfLines={1}>{item.main}</Text>
               {item.secondary ? <Text style={styles.sec} numberOfLines={1}>{item.secondary}</Text> : null}
@@ -145,12 +152,13 @@ const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: theme.card, zIndex: 50 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8, minHeight: 48 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '800', color: theme.ink },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', margin: 14, paddingRight: 14, backgroundColor: theme.bg, borderRadius: 16 },
-  input: { flex: 1, minHeight: 52, paddingHorizontal: 16, fontSize: 17, color: theme.ink },
-  item: { flexDirection: 'row', alignItems: 'center', minHeight: 60, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: theme.line },
-  main: { fontSize: 16, fontWeight: '700', color: theme.ink },
-  sec: { fontSize: 13, color: theme.muted, marginTop: 2 },
+  title: { fontSize: 18, fontWeight: '600', color: theme.ink },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', margin: 14, paddingRight: 14, backgroundColor: theme.bg, borderRadius: 14 },
+  input: { flex: 1, minHeight: 48, paddingHorizontal: 16, fontSize: 15, color: theme.ink },
+  item: { flexDirection: 'row', alignItems: 'center', minHeight: 56, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: theme.line },
+  iconBox: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  main: { fontSize: 15, fontWeight: '600', color: theme.ink },
+  sec: { fontSize: 12.5, color: theme.muted, marginTop: 2 },
   empty: { textAlign: 'center', color: theme.muted, marginTop: 30 },
   overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.7)', alignItems: 'center', justifyContent: 'center' },
 });
