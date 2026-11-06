@@ -403,6 +403,14 @@ test('dados guardados: cliente só nome e WhatsApp; viagem sem moradas; avaliaç
   await waitStatus(pax2, 'cancelled');
 });
 
+test('página inicial do servidor: 200 em vez de 404', async () => {
+  const r = await fetch(`http://127.0.0.1:${port}/`);
+  assert.equal(r.status, 200);
+  assert.match(await r.text(), /servidor está a funcionar/);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/favicon.ico`)).status, 204);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/nao-existe`)).status, 404);
+});
+
 test('geocode reverso: valida coordenadas', async () => {
   const bad = await fetch(`http://127.0.0.1:${port}/api/geocode/reverse?lat=abc&lng=1`);
   assert.equal(bad.status, 400);

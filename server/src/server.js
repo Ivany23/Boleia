@@ -44,6 +44,22 @@ export function createServer({
     }
   };
 
+  // Página inicial do servidor (quem abre o endereço no browser vê que está a funcionar)
+  app.get('/', (req, res) => {
+    const storage = rides.repo.kind === 'postgres' ? 'base de dados ligada' : 'a funcionar em memória';
+    res.type('html').send(`<!doctype html><html lang="pt"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Boleia · servidor</title>
+<style>body{font-family:system-ui,sans-serif;background:#F4F7F5;color:#0E1B14;display:grid;place-items:center;min-height:100vh;margin:0}
+main{background:#fff;border-radius:18px;padding:28px 32px;box-shadow:0 4px 18px rgba(6,33,15,.1);max-width:420px}
+h1{margin:0 0 6px;color:#0A7A4B}p{margin:6px 0;color:#5F6F66}b{color:#0E1B14}a{color:#0A7A4B}</style></head>
+<body><main><h1>Boleia · servidor ✅</h1>
+<p>O servidor está a funcionar (${storage}).</p>
+<p>Motoristas online: <b>${rides.driverCount()}</b></p>
+<p>Este endereço é só para a app. A app está em <a href="https://boleia-nine.vercel.app">boleia-nine.vercel.app</a>.</p>
+<p>Estado técnico: <a href="/api/health">/api/health</a></p></main></body></html>`);
+  });
+  app.get('/favicon.ico', (req, res) => res.status(204).end());
+
   app.get('/api/health', (req, res) =>
     res.json({ ok: true, drivers: rides.driverCount(), storage: rides.repo.kind }),
   );
