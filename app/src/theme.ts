@@ -6,10 +6,10 @@ const LIGHT = {
   primaryDark: '#075232',
   primaryLight: '#14A363',
   primarySoft: '#E8F5EE',
-  accent: '#E5A110', // âmbar refinado para pequenos detalhes
+  accent: '#E5A110',
   accentDark: '#BD8205',
   accentSoft: '#FFF6E0',
-  info: '#2563EB', // azul para localização e informação
+  info: '#2563EB',
   infoSoft: '#EFF6FF',
   night: '#2E3A6B',
   nightSoft: '#E3E7F6',
@@ -17,7 +17,7 @@ const LIGHT = {
   warnSoft: '#FFF0CC',
   bg: '#F5F7F6',
   card: '#FFFFFF',
-  ink: '#18241E', // grafite escuro elegante para textos e cabeçalhos
+  ink: '#18241E',
   muted: '#62736A',
   line: '#E2E8E4',
   danger: '#C8452F',
