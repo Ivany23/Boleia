@@ -16,6 +16,9 @@ Mais detalhes em [COMO-USAR.md](COMO-USAR.md) (guia) e [CONTRACT.md](CONTRACT.md
 ## Publicar
 Servidor no **Render** (`render.yaml`) e app web na **Vercel** (`app/vercel.json`). Passo a passo em [DEPLOY.md](DEPLOY.md).
 
+## Segurança (protótipo)
+Na versão de demonstração, o site usa a chave Google do servidor para mostrar o mapa: ela fica visível no browser. Riscos e correcção em [SEGURANCA.md](SEGURANCA.md).
+
 ## Testes
 ```bash
 cd server && npm test

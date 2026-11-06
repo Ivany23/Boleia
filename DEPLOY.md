@@ -50,7 +50,9 @@ GROUP BY d.name, d.phone, d.rating ORDER BY ganhos DESC;
 ```
 
 ## 3. Chave do Google Maps para o site (5 minutos)
-Sem esta chave o site mostra o **OpenStreetMap**. Esta chave fica visível no site, por isso **tem de ser uma chave nova e limitada**. Nunca use a chave do servidor (`GOOGLE_ROUTES_API_KEY`).
+> **Protótipo:** sem esta chave, o servidor entrega ao site a chave do servidor (`GOOGLE_ROUTES_API_KEY`), que fica **visível** no browser. Foi uma decisão consciente para a demonstração. Riscos e correcção em [SEGURANCA.md](SEGURANCA.md). Para desligar este modo: `MAPS_DEMO_USE_SERVER_KEY=0` no Render.
+
+Com `MAPS_DEMO_USE_SERVER_KEY=0` e sem esta chave, o site mostra o **OpenStreetMap**. Esta chave fica visível no site, por isso **tem de ser uma chave nova e limitada**. Nunca use a chave do servidor (`GOOGLE_ROUTES_API_KEY`).
 1. Abrir https://console.cloud.google.com/apis/credentials, no mesmo projecto das outras chaves.
 2. **Criar credenciais → Chave de API**.
 3. Em **Restrições da aplicação**, escolher **Referenciadores HTTP (sites)** e acrescentar:

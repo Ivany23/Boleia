@@ -48,10 +48,16 @@ export function createServer({
     res.json({ ok: true, drivers: rides.driverCount(), storage: rides.repo.kind }),
   );
 
-  // Configuração pública da app web (a chave do Google Maps do SITE: limitada ao domínio)
-  app.get('/api/config', (req, res) =>
-    res.json({ googleMapsWebKey: process.env.GOOGLE_MAPS_WEB_KEY || null }),
-  );
+  // Configuração pública da app web: chave do Google Maps para o SITE.
+  // PROTÓTIPO: se não houver chave própria do site (GOOGLE_MAPS_WEB_KEY), entrega a chave
+  // do servidor, que fica VISÍVEL no browser. Vulnerabilidade conhecida, explicada em
+  // SEGURANCA.md. Para desligar: MAPS_DEMO_USE_SERVER_KEY=0 no Render.
+  const demoKey = process.env.MAPS_DEMO_USE_SERVER_KEY !== '0' ? process.env.GOOGLE_ROUTES_API_KEY : null;
+  const webKey = process.env.GOOGLE_MAPS_WEB_KEY || demoKey || null;
+  if (!process.env.GOOGLE_MAPS_WEB_KEY && demoKey) {
+    console.log('[boleia] AVISO: o site usa a chave do servidor (modo protótipo). Ver SEGURANCA.md.');
+  }
+  app.get('/api/config', (req, res) => res.json({ googleMapsWebKey: webKey }));
 
   app.get('/api/pricing', (req, res) =>
     res.json({ ...pricingInfo(clock()), learning: mk.snapshot(clock()) }),
