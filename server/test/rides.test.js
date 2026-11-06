@@ -21,8 +21,10 @@ const reqBody = (extra = {}) => ({
   category: 'economico',
   payment: 'dinheiro',
   passengerName: 'Ana',
+  phone: '84 123 4567',
   ...extra,
 });
+let driverSeq = 0;
 
 let srv, port;
 const sockets = [];
@@ -60,9 +62,11 @@ async function until(fn, ms = 2000) {
 const statuses = (s) => (s.log['ride:update'] ?? []).map((r) => r.status);
 const waitStatus = (s, st) => until(() => statuses(s).includes(st));
 const ack = (s, ev, p) => new Promise((res) => s.emit(ev, p, res));
-const online = async (cat = 'economico', loc = BAIXA) => {
+const online = async (cat = 'economico', loc = BAIXA, phone = `86${String(1000000 + ++driverSeq)}`) => {
   const d = await client();
+  d.phone = phone;
   d.emit('driver:online', {
+    phone,
     name: 'Zé',
     car: 'Toyota',
     plate: 'AAA-111',
@@ -332,6 +336,71 @@ test('aprendizagem: o servidor regista cotações, pedidos e respostas', async (
   assert.ok(keys[1].requests >= 1, 'pedido registado');
   const pr = await (await fetch(`http://127.0.0.1:${port}/api/pricing`)).json();
   assert.equal(typeof pr.learning.conforto, 'number');
+});
+
+test('WhatsApp: pedido sem número válido é recusado; motorista sem número não fica online', async () => {
+  const pax = await client();
+  for (const phone of [undefined, '', '12345', '84 123 456', '81 123 4567', '+351 912 345 678']) {
+    const r = await ack(pax, 'ride:request', reqBody({ pickup: ZONE(11), phone }));
+    assert.equal(r.ok, false, String(phone));
+    assert.match(r.error, /WhatsApp/);
+  }
+  const d = await client();
+  const before = srv.rides.driverCount();
+  d.emit('driver:online', { name: 'X', car: 'Y', plate: 'Z', category: 'moto', location: ZONE(11) });
+  await until(() => d.log['driver:error']?.[0]);
+  assert.match(d.log['driver:error'][0].error, /WhatsApp/);
+  assert.equal(srv.rides.driverCount(), before);
+});
+
+test('dados guardados: cliente só nome e WhatsApp; viagem sem moradas; avaliação sobrevive ao desligar', async () => {
+  const repo = srv.rides.repo;
+  const z = ZONE(12);
+  const phone = '87 765 4321';
+  let d = await online('conforto', z, phone);
+  const pax = await client();
+  const r = await ack(pax, 'ride:request', reqBody({ category: 'conforto', pickup: z, passengerName: 'Maria', phone: '+258 82 555 0000' }));
+  assert.equal(r.ok, true);
+
+  // cliente: exactamente { phone, name }
+  assert.deepEqual(repo._passengers.get('+258825550000'), { phone: '+258825550000', name: 'Maria' });
+
+  await until(() => d.log['ride:offer']?.[0]);
+  d.emit('ride:accept', { rideId: r.ride.id });
+  for (const [ev, st] of [['ride:arrived', 'arrived'], ['ride:start', 'in_progress'], ['ride:complete', 'completed']]) {
+    d.emit(ev, { rideId: r.ride.id });
+    await waitStatus(pax, st);
+  }
+  assert.equal((await ack(pax, 'ride:rate', { rideId: r.ride.id, stars: 1 })).ok, true);
+
+  // viagem guardada sem moradas, sem coordenadas e sem dados do passageiro
+  const saved = await until(() => repo._rides.get(r.ride.id));
+  assert.equal(saved.status, 'completed');
+  assert.equal(saved.driverPhone, '+258877654321');
+  assert.equal(saved.price, r.ride.price);
+  assert.equal(saved.driverEarnings + saved.platformFee, saved.price);
+  assert.equal(saved.rating, 1);
+  const json = JSON.stringify(saved);
+  for (const forbidden of ['Maria', '825550000', 'Zona', 'address', 'pickup', 'dropoff', '"lat"']) {
+    assert.ok(!json.includes(forbidden), `a viagem guardada não pode conter ${forbidden}`);
+  }
+
+  // o motorista desliga e volta: a avaliação (puxada para baixo pelo 1) mantém-se
+  const ratingBefore = repo._drivers.get('+258877654321').rating;
+  assert.ok(ratingBefore < 4.8);
+  d.disconnect();
+  await until(() => !srv.rides.nearestFree('conforto', z));
+  d = await online('conforto', z, phone);
+  const pax2 = await client();
+  const r2 = await ack(pax2, 'ride:request', reqBody({ category: 'conforto', pickup: z }));
+  await until(() => d.log['ride:offer']?.[0]);
+  d.emit('ride:accept', { rideId: r2.ride.id });
+  await waitStatus(pax2, 'accepted');
+  const acc = pax2.log['ride:update'].find((u) => u.status === 'accepted');
+  assert.equal(acc.driver.rating, Math.round(ratingBefore * 10) / 10);
+  assert.equal(acc.driver.phone, undefined, 'o WhatsApp do motorista não é enviado ao passageiro');
+  pax2.emit('ride:cancel', { rideId: r2.ride.id, reason: 'teste' });
+  await waitStatus(pax2, 'cancelled');
 });
 
 test('geocode reverso: valida coordenadas', async () => {

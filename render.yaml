@@ -1,5 +1,6 @@
-# Render Blueprint: servidor Boleia (Express + Socket.IO) + base de dados PostgreSQL
-# No Render: New > Blueprint > escolher este repositório. Depois preencher as chaves da Google.
+# Render Blueprint: servidor Boleia (Express + Socket.IO)
+# Base de dados: Neon (PostgreSQL), indicada em DATABASE_URL.
+# No Render: New > Blueprint > escolher este repositório. Depois preencher as variáveis secretas.
 services:
   - type: web
     name: boleia-server
@@ -18,18 +19,11 @@ services:
         sync: false
       - key: GOOGLE_PLACES_API_KEY
         sync: false
-      # Aprendizagem de preços (estatísticas guardadas na base de dados)
+      # Endereço da base de dados Neon (formato postgres:// ou jdbc:postgresql://)
       - key: DATABASE_URL
-        fromDatabase:
-          name: boleia-db
-          property: connectionString
+        sync: false
+      # Chave do Google Maps para o site (limitada ao domínio da Vercel; ver DEPLOY.md)
+      - key: GOOGLE_MAPS_WEB_KEY
+        sync: false
       # Opcionais (preços): FUEL_GASOLINA_MZN, FUEL_GASOLEO_MZN, FUEL_FONTE,
       # PLATFORM_FEE (0.12), SERVICE_FEE (10), DRIVER_MIN_HOURLY (300), ROUTES_TRAFFIC
-
-databases:
-  - name: boleia-db
-    plan: free
-    region: frankfurt
-    databaseName: boleia
-    user: boleia
-    ipAllowList: [] # só o servidor do Render tem acesso

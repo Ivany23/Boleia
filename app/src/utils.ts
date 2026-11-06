@@ -72,6 +72,24 @@ export function priceTags(p: { period?: PricePeriod; traffic?: Traffic; highDema
   return tags;
 }
 
+/**
+ * Número de WhatsApp de Moçambique no formato +2588XXXXXXXX, ou null se inválido.
+ * Aceita "84 123 4567", "+258 84 123 4567", "258841234567". Redes móveis 82–87.
+ * (Igual à validação do servidor.)
+ */
+export function normalizePhone(raw: string): string | null {
+  let d = String(raw ?? '').replace(/\D/g, '');
+  if (d.startsWith('00258')) d = d.slice(5);
+  else if (d.startsWith('258') && d.length === 12) d = d.slice(3);
+  return /^8[2-7]\d{7}$/.test(d) ? `+258${d}` : null;
+}
+
+/** "+258841234567" -> "84 123 4567" */
+export const formatPhone = (p: string) => {
+  const d = p.replace(/^\+258/, '');
+  return d.length === 9 ? `${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}` : p;
+};
+
 export const clockTime = (ms: number) => {
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;

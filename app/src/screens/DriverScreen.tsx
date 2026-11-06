@@ -90,6 +90,7 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
 
   const goOnline = useCallback(() => {
     getSocket().emit('driver:online', {
+      phone: profile.phone,
       name: profile.name,
       car: profile.car ?? '',
       plate: profile.plate ?? '',
@@ -174,13 +175,21 @@ export function DriverScreen({ profile, onExit }: { profile: Profile; onExit: ()
     const onConnect = () => {
       if (onlineRef.current) goOnline();
     };
+    // o servidor recusou ficar online (ex.: número de WhatsApp inválido)
+    const onDriverError = (e: { error?: string }) => {
+      onlineRef.current = false;
+      setOnline(false);
+      setNotice(typeof e?.error === 'string' ? e.error : 'Não foi possível ficar online.');
+    };
     s.on('ride:offer', onOffer);
     s.on('ride:update', onUpdate);
     s.on('connect', onConnect);
+    s.on('driver:error', onDriverError);
     return () => {
       s.off('ride:offer', onOffer);
       s.off('ride:update', onUpdate);
       s.off('connect', onConnect);
+      s.off('driver:error', onDriverError);
       if (onlineRef.current) s.emit('driver:offline');
     };
   }, [goOnline]);

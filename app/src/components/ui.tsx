@@ -328,34 +328,34 @@ export function Avatar({ name, size = 52, emoji }: { name: string; size?: number
 }
 
 export const common = StyleSheet.create({
-  h1: { fontSize: 24, fontWeight: '800', color: theme.ink, letterSpacing: -0.3 },
-  h2: { fontSize: 18, fontWeight: '700', color: theme.ink },
-  body: { fontSize: 15, color: theme.ink },
-  muted: { fontSize: 13, color: theme.muted },
+  h1: { fontSize: 21, fontWeight: '800', color: theme.ink, letterSpacing: -0.3 },
+  h2: { fontSize: 16, fontWeight: '700', color: theme.ink },
+  body: { fontSize: 14, color: theme.ink },
+  muted: { fontSize: 12.5, color: theme.muted },
   row: { flexDirection: 'row', alignItems: 'center' },
   card: { backgroundColor: theme.card, borderRadius: 16, padding: 14 },
 });
 
 const styles = StyleSheet.create({
   btn: {
-    minHeight: 54,
-    borderRadius: 16,
+    minHeight: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
   },
-  btnText: { fontSize: 17, fontWeight: '700' },
+  btnText: { fontSize: 16, fontWeight: '700' },
   sheet: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: theme.card,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 18,
-    paddingTop: 8,
-    gap: 12,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    gap: 10,
   },
   grab: { alignSelf: 'center', width: 42, height: 5, borderRadius: 3, backgroundColor: theme.line },
   grabArea: { alignSelf: 'center', alignItems: 'center', gap: 2, paddingHorizontal: 20 },

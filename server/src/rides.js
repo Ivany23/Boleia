@@ -1,6 +1,9 @@
 import { haversine } from './geo.js';
-import { createMarket } from './market.js';
+import { createMarket, zoneOf } from './market.js';
 import { CATEGORIES, PAYMENTS } from './pricing.js';
+import { createMemoryRepo, normalizePhone } from './repo.js';
+
+const PHONE_ERROR = 'Indique um número de WhatsApp válido (ex.: 84 123 4567).';
 
 const ACTIVE = ['accepted', 'arrived', 'in_progress'];
 const TERMINAL = ['completed', 'cancelled', 'no_drivers'];
@@ -34,6 +37,7 @@ export function createRideService({
   io,
   quotes,
   market = createMarket(),
+  repo = createMemoryRepo(),
   offerTimeoutMs = 15000,
   clock = () => new Date(),
   log = console.log,
@@ -44,6 +48,7 @@ export function createRideService({
   const meta = new Map(); // rideId -> { tried:Set, timer, offeredTo }
   const ended = new Map(); // rideId -> ms em que terminou
   const rated = new Set(); // rideIds já avaliados
+  const rideDriverPhone = new Map(); // rideId -> WhatsApp do motorista (nunca enviado ao passageiro)
   let seq = 0;
 
   const say = (msg) => log(`[boleia] ${msg}`);
@@ -57,7 +62,10 @@ export function createRideService({
   function setStatus(ride, status) {
     ride.status = status;
     say(`viagem ${ride.id} -> ${status}`);
-    if (TERMINAL.includes(status)) ended.set(ride.id, nowMs());
+    if (TERMINAL.includes(status)) {
+      ended.set(ride.id, nowMs());
+      persistRide(ride);
+    }
     emitRide(ride);
   }
 
@@ -186,6 +194,30 @@ export function createRideService({
     return best;
   }
 
+  /** Guarda a viagem terminada: só valores e estatística, sem moradas nem dados do passageiro. */
+  function persistRide(ride) {
+    if (ride.id === 'pending') return;
+    repo
+      .saveRide({
+        id: ride.id,
+        driverPhone: rideDriverPhone.get(ride.id) ?? null,
+        category: ride.category,
+        payment: ride.payment,
+        status: ride.status,
+        price: ride.price,
+        driverEarnings: ride.status === 'completed' ? (ride.fare?.driverEarnings ?? 0) : 0,
+        platformFee: ride.status === 'completed' ? (ride.fare?.platformFee ?? 0) : 0,
+        distanceMeters: ride.distanceMeters,
+        durationSeconds: ride.durationSeconds,
+        period: ride.period?.id ?? null,
+        zone: zoneOf(ride.pickup),
+        cancelledBy: ride.cancelledBy ?? null,
+        createdAt: ride.createdAt,
+        endedAt: Date.now(),
+      })
+      .catch(() => {});
+  }
+
   const learning = (category, point) => market.learning(category, point, clock());
   const note = (event, ride) => market.record(event, { point: ride.pickup, category: ride.category, date: clock() });
 
@@ -195,9 +227,15 @@ export function createRideService({
     }
     if (!CATEGORIES.includes(p.category)) return { ok: false, error: 'Categoria inválida.' };
     if (!PAYMENTS.includes(p.payment)) return { ok: false, error: 'Forma de pagamento inválida.' };
+    const phone = normalizePhone(p.phone);
+    if (!phone) return { ok: false, error: PHONE_ERROR };
     if (activeRideOfPassenger(socket.id)) {
       return { ok: false, error: 'Já tem uma viagem em curso.' };
     }
+    // Cliente: só nome e WhatsApp
+    repo
+      .savePassenger({ phone, name: str(p.passengerName, 60) || passengers.get(socket.id)?.name || 'Passageiro' })
+      .catch(() => {});
     let q = quotes.lookup(p.quoteId, p.pickup, p.dropoff);
     if (!q) {
       try {
@@ -287,9 +325,15 @@ export function createRideService({
 
     on('driver:online', (p) => {
       if (!p || !CATEGORIES.includes(p.category) || !validLatLng(p.location)) return;
+      const phone = normalizePhone(p.phone);
+      if (!phone) {
+        socket.emit('driver:error', { error: PHONE_ERROR });
+        return;
+      }
       const prev = drivers.get(socket.id);
       drivers.set(socket.id, {
         id: socket.id,
+        phone,
         name: str(p.name, 60) || 'Motorista',
         car: str(p.car, 60),
         plate: str(p.plate, 20),
@@ -301,7 +345,21 @@ export function createRideService({
         offering: prev?.offering ?? null,
         rideId: prev?.rideId ?? null,
       });
-      if (!prev) say(`motorista ${socket.id} online (${p.category})`);
+      if (!prev || prev.phone !== phone) {
+        say(`motorista ${socket.id} online (${p.category})`);
+        // guarda o motorista e recupera a avaliação acumulada (não se perde ao desligar)
+        const d0 = drivers.get(socket.id);
+        repo
+          .saveDriver({ phone, name: d0.name, car: d0.car, plate: d0.plate, category: d0.category })
+          .then((r) => {
+            const d = drivers.get(socket.id);
+            if (r && d && d.phone === phone && Number.isFinite(r.rating)) {
+              d.rating = r.rating;
+              d.ratingCount = r.ratingCount;
+            }
+          })
+          .catch(() => {});
+      }
     });
 
     on('driver:location', (p) => {
@@ -335,6 +393,7 @@ export function createRideService({
       meta.delete(ride.id);
       d.busy = true;
       d.rideId = ride.id;
+      rideDriverPhone.set(ride.id, d.phone);
       ride.driver = publicDriver(d);
       note('accepted', ride);
       setStatus(ride, 'accepted');
@@ -396,6 +455,9 @@ export function createRideService({
         d.rating = (d.rating * d.ratingCount + stars) / (d.ratingCount + 1);
         d.ratingCount += 1;
       }
+      const phone = rideDriverPhone.get(ride.id);
+      if (phone) repo.rateDriver(phone, stars).catch(() => {});
+      repo.setRideRating(ride.id, stars).catch(() => {});
       say(`viagem ${ride.id} avaliada com ${stars}`);
       return { ok: true };
     });
@@ -443,6 +505,7 @@ export function createRideService({
         ended.delete(id);
         rides.delete(id);
         rated.delete(id);
+        rideDriverPhone.delete(id);
       }
     }
   }
@@ -461,6 +524,7 @@ export function createRideService({
     nearestFree,
     learning,
     market,
+    repo,
     driverCount: () => drivers.size,
     rideCount: () => rides.size,
   };

@@ -55,6 +55,11 @@ type Ride = {
 | POST | `/api/quote` | `{ origin: LatLng, destination: LatLng }` | `{ quoteId, validForSeconds, distanceMeters, durationSeconds, staticDurationSeconds, polyline, prices: Record<Category, number>, fares: Record<Category, Fare>, period, traffic, highDemand }` |
 | GET | `/api/pricing` | | `{ fuel: { gasolina, gasoleo, fonte }, platformFee, serviceFee, driverMinHourly, driverMinHourlyByCategory, period, rates, learning }` |
 | GET | `/api/geocode/reverse` | query `lat`, `lng` | `Place` (morada do ponto; `"Ponto no mapa"` se não houver) |
+| GET | `/api/config` | | `{ googleMapsWebKey: string \| null }` (chave do Google Maps do site, `GOOGLE_MAPS_WEB_KEY`) |
+
+`/api/health` devolve também `storage: 'postgres' | 'memoria'`.
+
+**WhatsApp (obrigatório):** `ride:request` e `driver:online` levam `phone` (Moçambique, redes 82–87; aceita `84 123 4567`, `+258 84 123 4567`, `258841234567`; guardado como `+2588XXXXXXXX`). Sem número válido: `ride:request` responde `{ ok:false, error }` e `driver:online` emite `driver:error { error }`. O WhatsApp do motorista nunca é enviado ao passageiro. Do cliente guarda-se só nome e WhatsApp; as viagens são guardadas sem moradas nem dados do passageiro (`server/src/db.js`).
 
 `Fare = { total, driverEarnings, platformFee, multiplier, driverCost, breakdown: { base, distance, time, pickup, guarantee, surcharge, serviceFee } }` (`driverEarnings + platformFee = total`; a soma do `breakdown` é o `total`; `surcharge` é negativo quando há desconto). A `Ride` inclui também `fare`, `period`, `traffic`, `highDemand`.
 

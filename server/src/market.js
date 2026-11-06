@@ -155,14 +155,17 @@ export function createMarket({ store = createMemoryStore(), clock = () => new Da
  * Store PostgreSQL: carrega tudo para memória no arranque e grava as linhas
  * alteradas a cada 30 s. Se a base de dados falhar, continua em memória.
  */
-export async function createPgStore(url, { log = console.log, flushMs = 30000, pgModule } = {}) {
+export async function createPgStore(url, { log = console.log, flushMs = 30000, pgModule, pool: shared } = {}) {
   const mem = createMemoryStore();
-  let pool;
+  let pool = shared;
+  const ownPool = !shared; // só fecha a ligação se foi aberta aqui
   try {
-    const pg = pgModule ?? (await import('pg')).default;
-    const ssl = /render\.com|amazonaws|neon\.tech|supabase/.test(url) ? { rejectUnauthorized: false } : undefined;
-    pool = new pg.Pool({ connectionString: url, ssl, max: 3, idleTimeoutMillis: 30000 });
-    pool.on('error', (e) => log(`[boleia] base de dados: ${e.message}`));
+    if (!pool) {
+      const pg = pgModule ?? (await import('pg')).default;
+      const ssl = /render\.com|amazonaws|neon\.tech|supabase/.test(url) ? { rejectUnauthorized: false } : undefined;
+      pool = new pg.Pool({ connectionString: url, ssl, max: 3, idleTimeoutMillis: 30000 });
+      pool.on('error', (e) => log(`[boleia] base de dados: ${e.message}`));
+    }
     const exists = await pool.query(
       `SELECT 1 FROM information_schema.tables WHERE table_name = 'pricing_stats'`,
     );
@@ -186,7 +189,7 @@ export async function createPgStore(url, { log = console.log, flushMs = 30000, p
   } catch (e) {
     log(`[boleia] base de dados indisponível (${e.message}); a aprendizagem fica só em memória`);
     try {
-      await pool?.end();
+      if (ownPool) await pool?.end();
     } catch {
       // ignora
     }
@@ -228,7 +231,7 @@ export async function createPgStore(url, { log = console.log, flushMs = 30000, p
     async close() {
       clearInterval(timer);
       await flush();
-      await pool.end().catch(() => {});
+      if (ownPool) await pool.end().catch(() => {});
     },
   };
 }

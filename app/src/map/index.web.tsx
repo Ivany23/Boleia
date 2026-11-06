@@ -5,13 +5,15 @@
  * onPress, onPanDrag e onRegionChangeComplete.
  *
  * Motor:
- *  - Google Maps (igual ao telemóvel) se EXPO_PUBLIC_GOOGLE_MAPS_KEY estiver definida;
+ *  - Google Maps (igual ao telemóvel) se houver chave do site: EXPO_PUBLIC_GOOGLE_MAPS_KEY
+ *    (Vercel) ou GOOGLE_MAPS_WEB_KEY no servidor (Render, lida em /api/config);
  *  - OpenStreetMap (Leaflet) como reserva automática: sem chave, se o Google
  *    não carregar em 10 s ou se recusar a chave.
  */
 import L from 'leaflet';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { SERVER_URL } from '../api';
 
 type Coord = { latitude: number; longitude: number };
 type Region = Coord & { latitudeDelta: number; longitudeDelta: number };
@@ -19,6 +21,25 @@ type Padding = { top: number; right: number; bottom: number; left: number };
 type MapPressEvent = { nativeEvent: { coordinate: Coord } };
 
 const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+
+/**
+ * Chave do Google Maps do site: da Vercel (EXPO_PUBLIC_GOOGLE_MAPS_KEY) ou, se não
+ * existir, do servidor (GOOGLE_MAPS_WEB_KEY no Render, via /api/config).
+ */
+let keyPromise: Promise<string | null> | null = null;
+function googleKey(): Promise<string | null> {
+  if (GOOGLE_KEY) return Promise.resolve(GOOGLE_KEY);
+  if (!keyPromise) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    keyPromise = fetch(`${SERVER_URL}/api/config`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => (j && typeof j.googleMapsWebKey === 'string' && j.googleMapsWebKey ? j.googleMapsWebKey : null))
+      .catch(() => null)
+      .finally(() => clearTimeout(t));
+  }
+  return keyPromise;
+}
 
 const ok = (c?: Coord | null): c is Coord =>
   !!c && Number.isFinite(c.latitude) && Number.isFinite(c.longitude);
@@ -302,9 +323,11 @@ export default class MapView extends React.Component<MapProps, MapState> {
         { enableHighAccuracy: true, maximumAge: 10000 },
       );
     }
-    if (GOOGLE_KEY) {
+    const key = await googleKey();
+    if (!this.alive) return;
+    if (key) {
       try {
-        const g = await loadGoogle(GOOGLE_KEY);
+        const g = await loadGoogle(key);
         if (!this.alive || !this.el) return;
         authListeners.add(this.onAuthFail);
         this.use(googleEngine(g, this.el, this.startRegion(), this.hooks));

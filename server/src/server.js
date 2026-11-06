@@ -14,6 +14,7 @@ export function createServer({
   google,
   route,
   market,
+  repo,
   clock = () => new Date(),
   offerTimeoutMs = 15000,
   nearbyIntervalMs = 5000,
@@ -43,7 +44,14 @@ export function createServer({
     }
   };
 
-  app.get('/api/health', (req, res) => res.json({ ok: true, drivers: rides.driverCount() }));
+  app.get('/api/health', (req, res) =>
+    res.json({ ok: true, drivers: rides.driverCount(), storage: rides.repo.kind }),
+  );
+
+  // Configuração pública da app web (a chave do Google Maps do SITE: limitada ao domínio)
+  app.get('/api/config', (req, res) =>
+    res.json({ googleMapsWebKey: process.env.GOOGLE_MAPS_WEB_KEY || null }),
+  );
 
   app.get('/api/pricing', (req, res) =>
     res.json({ ...pricingInfo(clock()), learning: mk.snapshot(clock()) }),
@@ -103,7 +111,7 @@ export function createServer({
 
   const httpServer = http.createServer(app);
   const io = new Server(httpServer, { cors: { origin: '*' } });
-  const rides = createRideService({ io, quotes, market: mk, offerTimeoutMs, clock });
+  const rides = createRideService({ io, quotes, market: mk, repo, offerTimeoutMs, clock });
   io.on('connection', (socket) => rides.attach(socket));
   const nearbyTimer = setInterval(() => rides.broadcastNearby(), nearbyIntervalMs);
   const sweepTimer = setInterval(() => rides.sweep(), 60 * 1000);

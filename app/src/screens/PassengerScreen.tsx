@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import MapView, { Polyline } from '../map';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,7 +38,7 @@ import { ViewMarker } from '../components/ViewMarker';
 import { notify, tap } from '../haptics';
 import { addressOf, currentPosition } from '../location';
 import { getSocket } from '../socket';
-import { shadow, theme } from '../theme';
+import { theme } from '../theme';
 import type { AckResult, Category, DriverPublic, LatLng, Payment, Place, Profile, Quote, Ride } from '../types';
 import {
   CATEGORIES,
@@ -60,6 +61,7 @@ const LIVE = ['accepted', 'arrived', 'in_progress'];
 
 export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit: () => void }) {
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const mapRef = useRef<MapView>(null);
   const [pos, setPos] = useState<LatLng | null>(null);
   const posRef = useRef<LatLng | null>(null);
@@ -165,7 +167,8 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
           setTimeout(
             () =>
               mapRef.current?.fitToCoordinates(pts.map(toRN), {
-                edgePadding: { top: insets.top + 90, right: 50, bottom: 520, left: 50 },
+                // o painel ocupa ~metade do ecrã: o percurso fica na metade de cima
+                edgePadding: { top: insets.top + 80, right: 40, bottom: Math.round(winH * 0.55), left: 40 },
                 animated: true,
               }),
             150,
@@ -234,7 +237,7 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
       setRating(0);
       s.timeout(10000).emit(
         'ride:request',
-        { ...params, passengerName: profile.name, quoteId: quote?.quoteId, note: note.trim() },
+        { ...params, passengerName: profile.name, phone: profile.phone, quoteId: quote?.quoteId, note: note.trim() },
         (err: Error | null, res?: AckResult) => {
           requesting.current = false;
           if (err || !res || !res.ok) {
@@ -274,7 +277,7 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
         createdAt: Date.now(),
       });
     },
-    [profile.name, quote, note],
+    [profile.name, profile.phone, quote, note],
   );
 
   function cancelRide(reason = 'Cancelado durante a procura') {
@@ -505,18 +508,22 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
       {/* Sheets */}
       {!ride && !dropoff && !picking && (
         <Sheet>
-          <Text style={common.h1}>Olá, {profile.name.split(' ')[0]} 👋</Text>
-          <Pressable onPress={() => setSearch('dropoff')} style={[styles.where, shadow(1)]}>
-            <View style={styles.whereIcon}>
-              <Text style={{ fontSize: 16 }}>🔍</Text>
-            </View>
+          <Text style={styles.hello}>Olá, {profile.name.split(' ')[0]} 👋</Text>
+          <Pressable onPress={() => setSearch('dropoff')} style={styles.where} accessibilityRole="search">
+            <Text style={{ fontSize: 15 }}>🔍</Text>
             <Text style={styles.whereText}>Para onde vamos?</Text>
           </Pressable>
-          <PickupRow pickup={pickup} onPress={() => setSearch('pickup')} />
-          <View style={[common.row, { gap: 8 }]}>
+          <Pressable onPress={() => setSearch('pickup')} style={[common.row, styles.pickupMini]}>
+            <View style={styles.dot} />
+            <Text style={[common.muted, { flex: 1 }]} numberOfLines={1}>
+              Recolha: <Text style={{ color: theme.ink }}>{pickup?.address ?? 'a obter localização…'}</Text>
+            </Text>
+            <Text style={styles.linkSmall}>Alterar</Text>
+          </Pressable>
+          <View style={[common.row, { gap: 6 }]}>
             <View style={[styles.dotLive, { backgroundColor: nearby.length ? theme.primaryLight : theme.line }]} />
             <Text style={common.muted}>
-              {nearby.length > 0 ? `${nearby.length} motorista(s) perto de si` : 'Nenhum motorista visível por agora.'}
+              {nearby.length > 0 ? `${nearby.length} motorista(s) perto de si` : 'Nenhum motorista visível por agora'}
             </Text>
           </View>
         </Sheet>
@@ -524,10 +531,21 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
 
       {!ride && dropoff && !picking && (
         <Sheet>
-          <View style={common.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={common.muted}>Destino</Text>
-              <Text style={[common.h2, { fontSize: 16 }]} numberOfLines={1}>{dropoff.address}</Text>
+          {/* Recolha → destino num só cartão */}
+          <View style={styles.route}>
+            <View style={styles.routeRail}>
+              <View style={styles.dot} />
+              <View style={styles.railLine} />
+              <View style={styles.square} />
+            </View>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Pressable onPress={() => setSearch('pickup')} hitSlop={4}>
+                <Text style={styles.routeText} numberOfLines={1}>{pickup?.address ?? 'A obter localização…'}</Text>
+              </Pressable>
+              <View style={styles.routeSep} />
+              <Pressable onPress={() => setSearch('dropoff')} hitSlop={4}>
+                <Text style={[styles.routeText, { fontWeight: '700' }]} numberOfLines={1}>{dropoff.address}</Text>
+              </Pressable>
             </View>
             <Pressable
               onPress={() => {
@@ -540,15 +558,14 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
               style={styles.x}
               accessibilityLabel="Remover destino"
             >
-              <Text style={{ fontSize: 18, color: theme.muted }}>✕</Text>
+              <Text style={{ fontSize: 15, color: theme.muted }}>✕</Text>
             </Pressable>
           </View>
-          <PickupRow pickup={pickup} onPress={() => setSearch('pickup')} />
 
           {quoteLoading && !quote && (
-            <View style={{ alignItems: 'center', padding: 14 }}>
+            <View style={[common.row, { gap: 8, justifyContent: 'center', paddingVertical: 10 }]}>
               <ActivityIndicator color={theme.primary} />
-              <Text style={[common.muted, { marginTop: 6 }]}>A calcular o melhor preço…</Text>
+              <Text style={common.muted}>A calcular o melhor preço…</Text>
             </View>
           )}
           {quoteError ? (
@@ -559,76 +576,83 @@ export function PassengerScreen({ profile, onExit }: { profile: Profile; onExit:
           ) : null}
 
           {quote && (
-            <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-              <View style={[common.row, { gap: 8 }]}>
+            <>
+              <View style={[common.row, { gap: 6, flexWrap: 'wrap' }]}>
                 <Text style={common.muted}>
                   {formatDistance(quote.distanceMeters)} · {formatDuration(quote.durationSeconds)}
-                  {trafficDelay ? ` (+${formatDuration(trafficDelay)} de trânsito)` : ''}
+                  {trafficDelay ? ` (+${formatDuration(trafficDelay)} trânsito)` : ''} · 🔒 preço fixo
                 </Text>
                 {quoteLoading && <ActivityIndicator size="small" color={theme.primary} />}
               </View>
               <PriceTags tags={quoteTags} />
-              {CATEGORIES.map((c) => {
-                const on = category === c.id;
-                return (
-                  <Pressable
-                    key={c.id}
-                    onPress={() => {
-                      tap();
-                      setCategory(c.id);
-                    }}
-                    style={[styles.cat, on && styles.catOn]}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: on }}
-                  >
-                    <VehicleBadge category={c.id} size={48} />
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={common.h2}>{c.label}</Text>
-                      <Text style={common.muted}>{c.desc}</Text>
-                    </View>
-                    <Text style={[common.h2, { color: on ? theme.primaryDark : theme.ink }]}>
-                      {money(quote.prices?.[c.id])}
-                    </Text>
+
+              <ScrollView
+                style={{ maxHeight: Math.max(150, winH * 0.3) }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ gap: 6 }}
+              >
+                {CATEGORIES.map((c) => {
+                  const on = category === c.id;
+                  return (
+                    <Pressable
+                      key={c.id}
+                      onPress={() => {
+                        tap();
+                        setCategory(c.id);
+                      }}
+                      style={[styles.cat, on && styles.catOn]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                    >
+                      <VehicleBadge category={c.id} size={38} />
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={styles.catName}>{c.label}</Text>
+                        <Text style={styles.catDesc} numberOfLines={1}>{c.desc}</Text>
+                      </View>
+                      <Text style={[styles.catPrice, on && { color: theme.primaryDark }]}>{money(quote.prices?.[c.id])}</Text>
+                    </Pressable>
+                  );
+                })}
+                {selectedFare && (
+                  <Pressable onPress={() => setShowFare((v) => !v)} hitSlop={6} style={{ paddingVertical: 2 }}>
+                    <Text style={styles.linkSmall}>{showFare ? 'Esconder detalhe do preço ▲' : 'Como é calculado este preço? ▼'}</Text>
                   </Pressable>
-                );
-              })}
-              {selectedFare && (
-                <Pressable onPress={() => setShowFare((v) => !v)} hitSlop={6}>
-                  <Text style={styles.link}>{showFare ? 'Esconder detalhe do preço ▲' : 'Como é calculado este preço? ▼'}</Text>
+                )}
+                {showFare && selectedFare && <FareDetails fare={selectedFare} />}
+              </ScrollView>
+
+              {/* Pagamento e nota em botões pequenos */}
+              <View style={[common.row, { gap: 6 }]}>
+                {PAYMENTS.map((p) => {
+                  const on = payment === p.id;
+                  return (
+                    <Pressable
+                      key={p.id}
+                      onPress={() => {
+                        tap();
+                        setPayment(p.id);
+                      }}
+                      style={[styles.chip, on && styles.chipOn]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                    >
+                      <Text style={[styles.chipText, on && { color: '#fff' }]}>{p.label}</Text>
+                    </Pressable>
+                  );
+                })}
+                <Pressable onPress={() => setNoteOpen(true)} style={[styles.chip, note ? styles.chipNote : null]}>
+                  <Text style={styles.chipText} numberOfLines={1}>✏️ {note ? 'Nota ✓' : 'Nota'}</Text>
                 </Pressable>
-              )}
-              {showFare && selectedFare && <FareDetails fare={selectedFare} />}
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {PAYMENTS.map((p) => (
-                  <Pressable
-                    key={p.id}
-                    onPress={() => {
-                      tap();
-                      setPayment(p.id);
-                    }}
-                    style={[styles.pay, payment === p.id && styles.payOn]}
-                  >
-                    <Text style={[styles.payText, payment === p.id && { color: '#fff' }]}>{p.label}</Text>
-                    {p.note ? <Text style={[styles.payNote, payment === p.id && { color: '#DCEFE7' }]}>{p.note}</Text> : null}
-                  </Pressable>
-                ))}
               </View>
-              <Pressable onPress={() => setNoteOpen(true)} style={styles.noteRow}>
-                <Text style={{ fontSize: 16 }}>✏️</Text>
-                <Text style={[common.body, { flex: 1, color: note ? theme.ink : theme.muted }]} numberOfLines={1}>
-                  {note || 'Nota para o motorista (ex.: portão azul)'}
-                </Text>
-                <Text style={{ color: theme.primary, fontWeight: '700' }}>{note ? 'Editar' : 'Adicionar'}</Text>
-              </Pressable>
+              {payment !== 'dinheiro' ? <Text style={[common.muted, { fontSize: 11.5 }]}>Paga ao motorista no fim da viagem.</Text> : null}
               {requestError ? <ErrorNote text={requestError} /> : null}
-              <Text style={[common.muted, { textAlign: 'center', fontSize: 12 }]}>🔒 Preço fixo: paga o valor que vê agora.</Text>
               <Button
-                title={`Pedir Boleia · ${money(quote.prices?.[category])}`}
+                title={`Pedir ${categoryLabel(category)} · ${money(quote.prices?.[category])}`}
                 variant="accent"
                 disabled={quoteLoading}
                 onPress={() => pickup && dropoff && doRequest({ pickup, dropoff, category, payment })}
               />
-            </ScrollView>
+            </>
           )}
         </Sheet>
       )}
@@ -861,19 +885,6 @@ function statusTitle(ride: Ride, driverLoc: LatLng | null) {
   return 'O motorista está a caminho';
 }
 
-function PickupRow({ pickup, onPress }: { pickup: Place | null; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={[common.row, styles.pickupRow]}>
-      <View style={styles.dot} />
-      <View style={{ flex: 1 }}>
-        <Text style={common.muted}>Recolha</Text>
-        <Text style={common.body} numberOfLines={1}>{pickup?.address ?? 'A obter localização…'}</Text>
-      </View>
-      <Text style={{ color: theme.primary, fontWeight: '700' }}>Alterar</Text>
-    </Pressable>
-  );
-}
-
 function SearchingPulse({ category }: { category: Category }) {
   const [v] = useState(() => new Animated.Value(0));
   useEffect(() => {
@@ -925,24 +936,33 @@ const styles = StyleSheet.create({
   pickHintText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   floatingRight: { position: 'absolute', right: 16 },
   mapTools: { position: 'absolute', right: 16, gap: 10 },
-  where: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, borderRadius: 18, backgroundColor: theme.card, paddingHorizontal: 10, borderWidth: 1, borderColor: theme.line },
-  whereIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' },
-  noteRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, borderRadius: 14, backgroundColor: theme.bg, paddingHorizontal: 12 },
+  hello: { fontSize: 18, fontWeight: '800', color: theme.ink },
+  where: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, borderRadius: 14, backgroundColor: theme.bg, paddingHorizontal: 14 },
+  pickupMini: { gap: 8, minHeight: 28 },
+  linkSmall: { color: theme.primary, fontWeight: '700', fontSize: 12.5, textAlign: 'center' },
+  // cartão recolha -> destino
+  route: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: theme.bg, borderRadius: 14, paddingVertical: 10, paddingLeft: 12, paddingRight: 4 },
+  routeRail: { alignItems: 'center', width: 12 },
+  railLine: { width: 2, height: 18, backgroundColor: theme.line, marginVertical: 3 },
+  square: { width: 10, height: 10, borderRadius: 2, backgroundColor: theme.accentDark },
+  routeText: { fontSize: 13.5, color: theme.ink },
+  routeSep: { height: 1, backgroundColor: theme.line },
+  catName: { fontSize: 15, fontWeight: '700', color: theme.ink },
+  catDesc: { fontSize: 12, color: theme.muted },
+  catPrice: { fontSize: 15, fontWeight: '800', color: theme.ink },
+  chip: { minHeight: 34, borderRadius: 999, paddingHorizontal: 12, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center' },
+  chipOn: { backgroundColor: theme.primary },
+  chipNote: { backgroundColor: theme.accentSoft },
+  chipText: { fontSize: 12.5, fontWeight: '700', color: theme.ink },
   noteBg: { flex: 1, backgroundColor: 'rgba(6,33,15,0.45)', paddingHorizontal: 16 },
   noteCard: { backgroundColor: '#fff', borderRadius: 22, padding: 18, gap: 10 },
   noteInput: { minHeight: 80, maxHeight: 140, borderRadius: 14, backgroundColor: theme.bg, padding: 12, fontSize: 16, color: theme.ink, textAlignVertical: 'top' },
-  whereText: { fontSize: 18, fontWeight: '700', color: theme.ink },
-  pickupRow: { minHeight: 52, gap: 12 },
-  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: theme.primary },
+  whereText: { fontSize: 16, fontWeight: '700', color: theme.ink },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.primary },
   dotLive: { width: 8, height: 8, borderRadius: 4 },
-  x: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  cat: { flexDirection: 'row', alignItems: 'center', minHeight: 68, borderRadius: 16, borderWidth: 2, borderColor: theme.line, paddingHorizontal: 14 },
+  x: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  cat: { flexDirection: 'row', alignItems: 'center', minHeight: 54, borderRadius: 14, borderWidth: 1.5, borderColor: 'transparent', paddingHorizontal: 10 },
   catOn: { borderColor: theme.primary, backgroundColor: theme.primarySoft },
-  link: { color: theme.primary, fontWeight: '700', fontSize: 13, textAlign: 'center' },
-  pay: { flex: 1, minHeight: 56, borderRadius: 14, backgroundColor: theme.bg, alignItems: 'center', justifyContent: 'center', padding: 6 },
-  payOn: { backgroundColor: theme.primary },
-  payText: { fontSize: 14, fontWeight: '800', color: theme.ink },
-  payNote: { fontSize: 10, color: theme.muted, textAlign: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center' },
   rateBox: { backgroundColor: theme.accentSoft, borderRadius: 16, padding: 12, gap: 4 },
   driverCard: { backgroundColor: theme.bg, borderRadius: 16, padding: 12 },

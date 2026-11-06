@@ -105,6 +105,8 @@ export type PricingInfo = {
 export type Profile = {
   role: 'passenger' | 'driver';
   name: string;
+  /** WhatsApp, formato +2588XXXXXXXX */
+  phone: string;
   car?: string;
   plate?: string;
   category?: Category;

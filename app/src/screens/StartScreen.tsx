@@ -19,12 +19,13 @@ import { tap } from '../haptics';
 import { getPermission } from '../location';
 import { shadow, theme } from '../theme';
 import type { Category, Profile } from '../types';
-import { CATEGORIES } from '../utils';
+import { CATEGORIES, normalizePhone } from '../utils';
 
 export function StartScreen({ onStart }: { onStart: (p: Profile) => void }) {
   const insets = useSafeAreaInsets();
   const [role, setRole] = useState<'passenger' | 'driver'>('passenger');
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [car, setCar] = useState('');
   const [plate, setPlate] = useState('');
   const [category, setCategory] = useState<Category>('economico');
@@ -37,6 +38,8 @@ export function StartScreen({ onStart }: { onStart: (p: Profile) => void }) {
   async function go(skipPermission = false) {
     setError('');
     if (!name.trim()) return setError('Escreva o seu nome para continuar.');
+    const whatsapp = normalizePhone(phone);
+    if (!whatsapp) return setError('Escreva um número de WhatsApp válido de Moçambique (ex.: 84 123 4567).');
     if (isDriver && (!car.trim() || !plate.trim())) {
       return setError('Indique o carro e a matrícula.');
     }
@@ -52,6 +55,7 @@ export function StartScreen({ onStart }: { onStart: (p: Profile) => void }) {
     onStart({
       role,
       name: name.trim(),
+      phone: whatsapp,
       ...(isDriver ? { car: car.trim(), plate: plate.trim().toUpperCase(), category } : {}),
     });
   }
@@ -111,6 +115,26 @@ export function StartScreen({ onStart }: { onStart: (p: Profile) => void }) {
               autoComplete="name"
               returnKeyType="done"
             />
+            <Text style={styles.label}>Número de WhatsApp</Text>
+            <View style={styles.phoneRow}>
+              <View style={styles.phonePrefix}>
+                <Text style={styles.phonePrefixText}>+258</Text>
+              </View>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={phone}
+                onChangeText={(v) => setPhone(v.replace(/[^\d\s+]/g, '').slice(0, 16))}
+                placeholder="84 123 4567"
+                placeholderTextColor={theme.muted}
+                keyboardType="phone-pad"
+                autoComplete="tel"
+                textContentType="telephoneNumber"
+                maxLength={16}
+              />
+            </View>
+            <Text style={[common.muted, { fontSize: 12 }]}>
+              Guardamos só o seu nome e este número, para o contactar sobre as suas viagens.
+            </Text>
             {isDriver && (
               <>
                 <Text style={styles.label}>Carro</Text>
@@ -227,8 +251,8 @@ const styles = StyleSheet.create({
   heroCar: { position: 'absolute', right: 70, bottom: 58, transform: [{ rotate: '-62deg' }] },
   role: {
     flex: 1,
-    minHeight: 124,
-    borderRadius: 20,
+    minHeight: 104,
+    borderRadius: 18,
     backgroundColor: theme.card,
     alignItems: 'center',
     justifyContent: 'center',
@@ -250,7 +274,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: { fontSize: 13, fontWeight: '700', color: theme.muted },
-  input: { minHeight: 52, borderRadius: 14, backgroundColor: theme.bg, paddingHorizontal: 14, fontSize: 16, color: theme.ink },
+  phoneRow: { flexDirection: 'row', gap: 8 },
+  phonePrefix: { minHeight: 48, borderRadius: 12, backgroundColor: theme.bg, paddingHorizontal: 12, justifyContent: 'center' },
+  phonePrefixText: { fontSize: 16, fontWeight: '700', color: theme.ink },
+  input: { minHeight: 48, borderRadius: 12, backgroundColor: theme.bg, paddingHorizontal: 14, fontSize: 15, color: theme.ink },
   chip: {
     flex: 1,
     minHeight: 84,
