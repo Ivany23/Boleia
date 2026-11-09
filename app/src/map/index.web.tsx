@@ -669,6 +669,8 @@ type MarkerProps = {
 
   flat?: boolean;
   tracksViewChanges?: boolean;
+  /** ignorado na web (o marcador deixa passar o toque para o mapa) */
+  onPress?: () => void;
 };
 
 export function Marker({ coordinate, anchor, rotation = 0, zIndex = 0, children }: MarkerProps) {

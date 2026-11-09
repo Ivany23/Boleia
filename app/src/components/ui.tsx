@@ -192,13 +192,13 @@ export function ProgressBar({ value }: { value: number }) {
   );
 }
 
-export function MapPill({ text }: { text: string }) {
+export function MapPill({ text, muted = false }: { text: string; muted?: boolean }) {
   return (
     <View style={{ alignItems: 'center' }}>
-      <View style={[styles.pill, shadow(1)]}>
-        <Text style={styles.pillText}>{text}</Text>
+      <View style={[styles.pill, muted && { backgroundColor: theme.card }, shadow(1)]}>
+        <Text style={[styles.pillText, muted && { color: theme.muted }]}>{text}</Text>
       </View>
-      <View style={styles.pillTip} />
+      <View style={[styles.pillTip, muted && { borderTopColor: theme.card }]} />
     </View>
   );
 }

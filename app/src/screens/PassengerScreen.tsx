@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -57,6 +57,8 @@ import {
   priceTags,
   toRN,
   validPoint,
+  distToPath,
+  labelPoints,
 } from '../utils';
 import { PlaceSearch } from './PlaceSearch';
 
@@ -410,6 +412,29 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
   const cheapestPrice = showRoutes ? Math.min(...routes.map((r) => r.prices?.[category] ?? Infinity)) : 0;
   const fastestSecs = showRoutes ? Math.min(...routes.map((r) => r.durationSeconds)) : 0;
   const otherRoutes = showRoutes ? routes.filter((r) => r !== quote) : [];
+  const routePaths = useMemo(() => routes.map((r) => cleanPath(r.polyline)), [routes]);
+  const routeLabels = useMemo(() => labelPoints(routePaths), [routePaths]);
+  const chooseRoute = (r: Quote) => {
+    if (r === quote) return;
+    tap();
+    setQuote(r);
+    chosenKm.current = r.distanceMeters;
+  };
+  /** Toque no mapa: escolhe a rota mais perto do dedo (margem de ~5% do ecrã). */
+  const routeAt = (c: LatLng) => {
+    if (!showRoutes) return null;
+    const margin = Math.max(60, lastDelta.current * 111000 * 0.05);
+    let best: Quote | null = null;
+    let bestD = margin;
+    routes.forEach((r, i) => {
+      const d = distToPath(c, routePaths[i]);
+      if (d < bestD) {
+        bestD = d;
+        best = r;
+      }
+    });
+    return best as Quote | null;
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -438,7 +463,12 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
         }}
         onPress={(e) => {
           const c = e?.nativeEvent?.coordinate;
-          if (!picking || !c) return;
+          if (!c) return;
+          if (!picking) {
+            const r = routeAt({ lat: c.latitude, lng: c.longitude });
+            if (r) chooseRoute(r);
+            return;
+          }
           mapRef.current?.animateToRegion(
             { ...c, latitudeDelta: lastDelta.current, longitudeDelta: lastDelta.current },
             300,
@@ -462,6 +492,26 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
             <Polyline coordinates={routePts.map(toRN)} strokeWidth={5} strokeColor={theme.primary} />
           </React.Fragment>
         )}
+        {showRoutes &&
+          routes.map((r, i) => {
+            const at = routeLabels[i];
+            if (!at) return null;
+            const on = r === quote;
+            return (
+              <ViewMarker
+                key={`lbl-${r.quoteId ?? i}`}
+                point={at}
+                dep={`lbl-${r.quoteId}-${on ? 1 : 0}-${category}`}
+                anchor={{ x: 0.5, y: 1 }}
+                onPress={() => chooseRoute(r)}
+              >
+                <MapPill
+                  text={`${money(r.prices?.[category])} · ${formatDuration(r.durationSeconds)}`}
+                  muted={!on}
+                />
+              </ViewMarker>
+            );
+          })}
         {(dropoff || ride) && pickup && (
           <ViewMarker point={ride?.pickup ?? pickup} dep="p">
             <Pin color={theme.primary} />
@@ -708,11 +758,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
                     return (
                       <Pressable
                         key={r.quoteId ?? i}
-                        onPress={() => {
-                          tap();
-                          setQuote(r);
-                          chosenKm.current = r.distanceMeters;
-                        }}
+                        onPress={() => chooseRoute(r)}
                         style={[styles.routeOpt, on && styles.routeOptOn]}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: on }}

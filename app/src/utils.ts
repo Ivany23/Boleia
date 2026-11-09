@@ -51,6 +51,47 @@ export const validPoint = (p: any): p is LatLng =>
 export const cleanPath = (pts: LatLng[] | undefined | null) =>
   Array.isArray(pts) ? pts.filter(validPoint) : [];
 
+/** Distância (m) de um ponto ao percurso mais próximo de uma linha; Infinity se vazia. */
+export function distToPath(p: LatLng, path: LatLng[]) {
+  if (!path.length) return Infinity;
+  // plano local à volta do ponto (suficiente à escala de uma cidade)
+  const kx = 111320 * Math.cos((p.lat * Math.PI) / 180);
+  const ky = 110540;
+  const xy = (q: LatLng) => [(q.lng - p.lng) * kx, (q.lat - p.lat) * ky];
+  if (path.length === 1) return Math.hypot(...(xy(path[0]) as [number, number]));
+  let best = Infinity;
+  for (let i = 1; i < path.length; i++) {
+    const [ax, ay] = xy(path[i - 1]);
+    const [bx, by] = xy(path[i]);
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len = dx * dx + dy * dy;
+    const t = len > 0 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len)) : 0;
+    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+  }
+  return best;
+}
+
+/** Para cada percurso, o ponto mais afastado dos outros (onde pôr a etiqueta do preço). */
+export function labelPoints(paths: LatLng[][]): (LatLng | null)[] {
+  return paths.map((path, i) => {
+    if (!path.length) return null;
+    const others = paths.filter((_, j) => j !== i);
+    const step = Math.max(1, Math.floor(path.length / 60));
+    let best = path[Math.floor(path.length / 2)];
+    let bestD = -1;
+    // evita as pontas (partida e destino são comuns a todas as rotas)
+    for (let k = Math.floor(path.length * 0.15); k <= Math.ceil(path.length * 0.85) && k < path.length; k += step) {
+      const d = others.length ? Math.min(...others.map((o) => distToPath(path[k], o))) : 0;
+      if (d > bestD) {
+        bestD = d;
+        best = path[k];
+      }
+    }
+    return best;
+  });
+}
+
 export const pct = (m: number | undefined) =>
   `+${Math.round(((Number.isFinite(m as number) ? (m as number) : 1) - 1) * 100)}%`;
 

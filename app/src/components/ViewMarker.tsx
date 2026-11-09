@@ -8,11 +8,14 @@ export function ViewMarker({
   children,
   anchor,
   dep,
+  onPress,
 }: {
   point: LatLng;
   children: React.ReactElement;
   anchor?: { x: number; y: number };
   dep?: string;
+  /** só no telemóvel: na web o toque passa para o mapa */
+  onPress?: () => void;
 }) {
   const [st, setSt] = useState({ dep, track: true });
 
@@ -24,7 +27,7 @@ export function ViewMarker({
     return () => clearTimeout(t);
   }, [track, st.dep]);
   return (
-    <Marker coordinate={toRN(point)} anchor={anchor ?? { x: 0.5, y: 0.5 }} tracksViewChanges={track}>
+    <Marker coordinate={toRN(point)} anchor={anchor ?? { x: 0.5, y: 0.5 }} tracksViewChanges={track} onPress={onPress}>
       {children}
     </Marker>
   );
