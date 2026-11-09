@@ -70,7 +70,9 @@ export async function getQuote(origin: LatLng, destination: LatLng, stops: LatLn
   if (stops.length) body.stops = stops.map(pt);
   const q = await request<Quote>('/api/quote', { method: 'POST', body: JSON.stringify(body) }, 15000);
   if (!q || !q.prices) throw new ApiError('Resposta inválida do servidor.');
-  return { ...q, polyline: Array.isArray(q.polyline) ? q.polyline : [] };
+  const fix = (r: Quote): Quote => ({ ...r, polyline: Array.isArray(r.polyline) ? r.polyline : [] });
+  const routes = (Array.isArray(q.routes) ? q.routes : []).filter((r) => r && r.prices).map(fix);
+  return { ...fix(q), routes: routes.length ? routes : [fix(q)] };
 }
 
 export async function reverseGeocode(p: LatLng): Promise<Place> {

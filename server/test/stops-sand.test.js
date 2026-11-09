@@ -188,11 +188,11 @@ test('cotação com paragens: rota passa pelas paragens e o preço garantido exi
   assert.deepEqual(q.stops, [S1, S2]);
   assert.equal(q.polyline.length, 4);
   assert.ok(q.prices.economico > plain.prices.economico);
-  assert.equal(qs.lookup(q.quoteId, A, B, [S1, S2]), q);
+  assert.equal(qs.lookup(q.quoteId, A, B, [S1, S2]), q.routes[0]);
   assert.equal(qs.lookup(q.quoteId, A, B, [S1]), null, 'faltou uma paragem');
   assert.equal(qs.lookup(q.quoteId, A, B, [S2, S1]), null, 'ordem diferente');
   assert.equal(qs.lookup(q.quoteId, A, B), null);
-  assert.equal(qs.lookup(plain.quoteId, A, B, []), plain);
+  assert.equal(qs.lookup(plain.quoteId, A, B, []), plain.routes[0]);
 });
 
 test('cotação com areia: preço sobe e o aviso vem na cotação', async () => {

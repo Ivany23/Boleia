@@ -121,6 +121,8 @@ export type Quote = {
   period?: PricePeriod;
   traffic?: Traffic;
   highDemand?: boolean;
+  /** Todas as rotas possíveis (a recomendada primeiro), cada uma com o seu preço e quoteId. */
+  routes?: Quote[];
 };
 export type RideOffer = {
   ride: Ride;

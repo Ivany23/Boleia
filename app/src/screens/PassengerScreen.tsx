@@ -76,6 +76,9 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
   const [stops, setStops] = useState<Place[]>([]);
   const [search, setSearch] = useState<null | PlaceKind>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
+  // rotas possíveis para o mesmo destino; `quote` é a escolhida
+  const [routes, setRoutes] = useState<Quote[]>([]);
+  const chosenKm = useRef<number | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState('');
   const [quoteNonce, setQuoteNonce] = useState(0);
@@ -167,9 +170,18 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     getQuote(pickup, dropoff, stops)
       .then((q) => {
         if (id !== quoteId.current) return;
-        setQuote(q);
-        const pts = cleanPath(q.polyline);
-        if (pts.length > 1) {
+        const list = q.routes?.length ? q.routes : [q];
+        // ao renovar a cotação, mantém a rota que o passageiro escolheu (a de distância mais parecida)
+        const prev = chosenKm.current;
+        const pick =
+          prev === null
+            ? list[0]
+            : list.reduce((a, b) => (Math.abs(b.distanceMeters - prev) < Math.abs(a.distanceMeters - prev) ? b : a));
+        setRoutes(list);
+        setQuote(pick);
+        chosenKm.current = pick.distanceMeters;
+        const pts = list.flatMap((r) => cleanPath(r.polyline));
+        if (prev === null && pts.length > 1) {
           setTimeout(
             () =>
               mapRef.current?.fitToCoordinates(pts.map(toRN), {
@@ -183,6 +195,7 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
       .catch((e: any) => {
         if (id !== quoteId.current) return;
         setQuote(null);
+        setRoutes([]);
         setQuoteError(e?.message ?? 'Erro ao calcular o preço.');
       })
       .finally(() => {
@@ -305,6 +318,8 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
     setDropoff(null);
     setStops([]);
     setQuote(null);
+    setRoutes([]);
+    chosenKm.current = null;
     setNote('');
     setFollow(false);
     mapRef.current?.animateCamera({ pitch: 0, heading: 0 }, { duration: 300 });
@@ -391,6 +406,10 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
   const tags = quote ? priceTags({ ...quote, category }).filter((t) => t.key !== 'sand') : [];
   const waitRate = quote?.waitRates?.[category];
   const freeWait = quote?.freeWaitMin ?? 3;
+  const showRoutes = !ride && routes.length > 1;
+  const cheapestPrice = showRoutes ? Math.min(...routes.map((r) => r.prices?.[category] ?? Infinity)) : 0;
+  const fastestSecs = showRoutes ? Math.min(...routes.map((r) => r.durationSeconds)) : 0;
+  const otherRoutes = showRoutes ? routes.filter((r) => r !== quote) : [];
 
   return (
     <View style={{ flex: 1 }}>
@@ -429,10 +448,19 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
         {showNearby &&
           nearby.map((d) => <VehicleMarker key={d.id} point={d.location} category={d.category} size={22} />)}
         {routePts.length > 1 && (
-          <>
+          // a chave muda com a rota escolhida: as linhas voltam a ser criadas por ordem e a escolhida fica por cima
+          <React.Fragment key={`r-${quote?.quoteId ?? ride?.id ?? ''}`}>
+            {otherRoutes.map((r) => (
+              <Polyline
+                key={r.quoteId}
+                coordinates={cleanPath(r.polyline).map(toRN)}
+                strokeWidth={5}
+                strokeColor={isDark() ? 'rgba(170,180,190,0.55)' : 'rgba(90,100,110,0.45)'}
+              />
+            ))}
             <Polyline coordinates={routePts.map(toRN)} strokeWidth={10} strokeColor="rgba(10,122,75,0.22)" />
             <Polyline coordinates={routePts.map(toRN)} strokeWidth={5} strokeColor={theme.primary} />
-          </>
+          </React.Fragment>
         )}
         {(dropoff || ride) && pickup && (
           <ViewMarker point={ride?.pickup ?? pickup} dep="p">
@@ -615,6 +643,8 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
                   setDropoff(null);
                   setStops([]);
                   setQuote(null);
+                  setRoutes([]);
+                  chosenKm.current = null;
                   setQuoteError('');
                 }}
                 hitSlop={10}
@@ -666,6 +696,41 @@ export function PassengerScreen({ profile, onMenu }: { profile: Profile; onMenu:
                     ) : null}
                   </View>
                 </FadeIn>
+              ) : null}
+              {showRoutes ? (
+                <View style={styles.routes} accessibilityRole="radiogroup" accessibilityLabel="Rotas possíveis">
+                  {routes.map((r, i) => {
+                    const on = r === quote;
+                    const price = r.prices?.[category];
+                    const cheapest = price === cheapestPrice;
+                    const fastest = r.durationSeconds === fastestSecs;
+                    const label = cheapest && fastest ? 'Melhor' : cheapest ? 'Mais barata' : fastest ? 'Mais rápida' : `Rota ${i + 1}`;
+                    return (
+                      <Pressable
+                        key={r.quoteId ?? i}
+                        onPress={() => {
+                          tap();
+                          setQuote(r);
+                          chosenKm.current = r.distanceMeters;
+                        }}
+                        style={[styles.routeOpt, on && styles.routeOptOn]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: on }}
+                        accessibilityLabel={`${label}: ${formatDistance(r.distanceMeters)}, ${formatDuration(r.durationSeconds)}, ${money(price)}`}
+                      >
+                        <Text style={[styles.routeOptTag, cheapest && { color: theme.primary }]} numberOfLines={1}>
+                          {label}
+                        </Text>
+                        <Text style={[styles.routeOptPrice, on && { color: theme.ink }]} numberOfLines={1}>
+                          {money(price)}
+                        </Text>
+                        <Text style={styles.routeOptMeta} numberOfLines={1}>
+                          {formatDistance(r.distanceMeters)} · {formatDuration(r.durationSeconds)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
               ) : null}
               <PriceTags tags={tags} />
 
@@ -1095,6 +1160,21 @@ const styles = StyleSheet.create({
   waitInfoText: { fontSize: 11.5, color: theme.muted, flex: 1 },
   waitCard: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: theme.warnSoft, borderRadius: 12, padding: 10 },
   cats: { flexDirection: 'row', gap: 8 },
+  routes: { flexDirection: 'row', gap: 8 },
+  routeOpt: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: theme.line,
+    gap: 1,
+  },
+  routeOptOn: { borderColor: theme.primary, backgroundColor: theme.primarySoft },
+  routeOptTag: { fontSize: 11, fontWeight: '700', color: theme.muted },
+  routeOptPrice: { fontSize: 15, fontWeight: '800', color: theme.muted },
+  routeOptMeta: { fontSize: 11, color: theme.muted },
   catName: { fontSize: 13, fontWeight: '700', color: theme.ink },
   catDesc: { fontSize: 11.5, color: theme.muted },
   catPrice: { fontSize: 14, fontWeight: '700', color: theme.muted },

@@ -36,9 +36,8 @@ export function createQuoteService({
     for (const [id, q] of store) if (q.expiresAt < nowMs) store.delete(id);
   }
 
-  async function quote(origin, destination, stops = []) {
-    const via = (Array.isArray(stops) ? stops : []).map(pt);
-    const r = await route(origin, destination, via);
+  /** Preço de UMA rota já calculada; guarda a cotação (com o seu próprio quoteId). */
+  async function priceOne(r, origin, destination, via, ctx) {
     const polyline = Array.isArray(r.polyline) ? r.polyline : [origin, ...via, destination];
 
     // Piso do percurso (areia): nunca impede a cotação
@@ -50,6 +49,54 @@ export function createQuoteService({
         sand = null;
       }
     }
+
+    const priced = priceRoute(r, {
+      date: ctx.date,
+      demand: ctx.demand,
+      learning: ctx.learning,
+      pickup: ctx.pickup,
+      stops: via.length,
+      sandMeters: sand?.sandMeters ?? 0,
+      rain: ctx.wx?.multiplier ?? 1,
+      local: ctx.local,
+    });
+    const value = {
+      quoteId: randomUUID(),
+      expiresAt: ctx.nowMs + ttlMs,
+      validForSeconds: Math.round(ttlMs / 1000),
+      distanceMeters: r.distanceMeters,
+      durationSeconds: r.durationSeconds,
+      staticDurationSeconds: r.staticDurationSeconds ?? r.durationSeconds,
+      polyline,
+      stops: via,
+      surface: sand
+        ? {
+            sandMeters: sand.sandMeters,
+            sandRatio: sand.sandRatio,
+            pickupSand: !!sand.pickupSand,
+            dropoffSand: !!sand.dropoffSand,
+          }
+        : null,
+      ...priced,
+      rain: ctx.wx && ctx.wx.rain !== 'none' ? { level: ctx.wx.rain, multiplier: ctx.wx.multiplier } : null,
+    };
+    store.set(value.quoteId, {
+      origin: pt(origin),
+      destination: pt(destination),
+      stops: via,
+      value,
+      expiresAt: value.expiresAt,
+    });
+    return value;
+  }
+
+  /**
+   * Cotação da rota principal + `routes`: todas as rotas possíveis (até 3, a principal
+   * primeiro), cada uma com o seu preço e quoteId, para o passageiro escolher a mais barata.
+   */
+  async function quote(origin, destination, stops = []) {
+    const via = (Array.isArray(stops) ? stops : []).map(pt);
+    const r = await route(origin, destination, via);
 
     let wx = null;
     try {
@@ -67,51 +114,45 @@ export function createQuoteService({
         return def;
       }
     };
-    const priced = priceRoute(r, {
+    // procura, aprendizagem e motorista mais perto: calculados UMA vez para todas as rotas
+    const once = (fn) => {
+      const memo = new Map();
+      return (c) => {
+        if (!memo.has(c)) memo.set(c, fn(c));
+        return memo.get(c);
+      };
+    };
+    const ctx = {
       date,
-      demand: safe(demand, 1),
-      learning: safe(learning, 1),
-      pickup: safe(pickup, null),
-      stops: via.length,
-      sandMeters: sand?.sandMeters ?? 0,
-      rain: wx?.multiplier ?? 1,
+      nowMs,
+      wx,
+      demand: once(safe(demand, 1)),
+      learning: once(safe(learning, 1)),
+      pickup: once(safe(pickup, null)),
       // tarifa de bairro: destino e paragens perto do ponto de partida
       local: haversine(origin, destination) <= LOCAL_RADIUS_M && via.every((p) => haversine(origin, p) <= LOCAL_RADIUS_M),
-    });
-    const value = {
-      quoteId: randomUUID(),
-      expiresAt: nowMs + ttlMs,
-      validForSeconds: Math.round(ttlMs / 1000),
-      distanceMeters: r.distanceMeters,
-      durationSeconds: r.durationSeconds,
-      staticDurationSeconds: r.staticDurationSeconds ?? r.durationSeconds,
-      polyline,
-      stops: via,
-      surface: sand
-        ? {
-            sandMeters: sand.sandMeters,
-            sandRatio: sand.sandRatio,
-            pickupSand: !!sand.pickupSand,
-            dropoffSand: !!sand.dropoffSand,
-          }
-        : null,
-      ...priced,
-      rain: wx && wx.rain !== 'none' ? { level: wx.rain, multiplier: wx.multiplier } : null,
     };
+
     sweep(nowMs);
-    store.set(value.quoteId, {
-      origin: pt(origin),
-      destination: pt(destination),
-      stops: via,
-      value,
-      expiresAt: value.expiresAt,
-    });
+    const alts = Array.isArray(r.alternatives) ? r.alternatives.filter((a) => a?.distanceMeters > 0) : [];
+    const priced = await Promise.all([r, ...alts].map((x) => priceOne(x, origin, destination, via, ctx)));
+    // rotas quase iguais (mesma distância e tempo) não ajudam a escolher
+    const routes = priced.filter(
+      (q, i) =>
+        !priced
+          .slice(0, i)
+          .some(
+            (o) =>
+              Math.abs(o.distanceMeters - q.distanceMeters) < 100 &&
+              Math.abs(o.durationSeconds - q.durationSeconds) < 60,
+          ),
+    );
     try {
       onQuote(origin);
     } catch {
       // as estatísticas nunca impedem a cotação
     }
-    return value;
+    return { ...routes[0], routes };
   }
 
   /** Cotação guardada, se ainda válida e para os mesmos locais e paragens; senão null. */

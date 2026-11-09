@@ -107,6 +107,8 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
     const body = { origin: ll(origin), destination: ll(destination), travelMode: 'DRIVE' };
     // paragens intermédias, pela ordem escolhida pelo passageiro
     if (stops.length) body.intermediates = stops.map(ll);
+    // até 3 rotas alternativas NO MESMO pedido (a Google não as dá com paragens)
+    else body.computeAlternativeRoutes = true;
     body.routingPreference = traffic ? 'TRAFFIC_AWARE' : 'TRAFFIC_UNAWARE';
     return call(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
@@ -127,7 +129,8 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
 
   /**
    * Rota de carro (com paragens opcionais pelo caminho):
-   * { distanceMeters, durationSeconds (com trânsito), staticDurationSeconds, polyline }.
+   * { distanceMeters, durationSeconds (com trânsito), staticDurationSeconds, polyline, trafficAware,
+   *   alternatives: [outras rotas no mesmo formato, sem paragens] }.
    */
   async function route(origin, destination, stops = []) {
     const via = (Array.isArray(stops) ? stops : []).map((p) => `${r4(p.lat)},${r4(p.lng)}`).join('>');
@@ -154,16 +157,22 @@ export function createGoogle({ fetchImpl = fetch, now = Date.now, timeoutMs = 10
     }
     if (!data) data = await computeRoute(origin, destination, false, stops);
 
-    const r = data.routes?.[0];
-    if (!r) throw new HttpError(404, 'Não foi possível calcular a rota entre os dois locais.');
+    const list = (data.routes ?? []).filter((r) => r && r.distanceMeters > 0);
+    if (!list.length) throw new HttpError(404, 'Não foi possível calcular a rota entre os dois locais.');
     const secs = (s) => parseInt(s ?? '0', 10) || 0;
-    const distanceMeters = r.distanceMeters ?? 0;
-    const durationSeconds = secs(r.duration);
-    const staticDurationSeconds = secs(r.staticDuration) || durationSeconds;
-    const encoded = r.polyline?.encodedPolyline;
-    const polyline = encoded ? decodePolyline(encoded) : [origin, ...stops, destination];
     // trafficAware: false = a duração NÃO inclui o trânsito (o preço estima-o na hora de ponta)
-    const value = { distanceMeters, durationSeconds, staticDurationSeconds, polyline, trafficAware };
+    const shape = (r) => {
+      const durationSeconds = secs(r.duration);
+      const encoded = r.polyline?.encodedPolyline;
+      return {
+        distanceMeters: r.distanceMeters ?? 0,
+        durationSeconds,
+        staticDurationSeconds: secs(r.staticDuration) || durationSeconds,
+        polyline: encoded ? decodePolyline(encoded) : [origin, ...stops, destination],
+        trafficAware,
+      };
+    };
+    const value = { ...shape(list[0]), alternatives: list.slice(1, 3).map(shape) };
     cache.set(key, { at: now(), value });
     if (cache.size > 2000) cache.delete(cache.keys().next().value);
     return value;

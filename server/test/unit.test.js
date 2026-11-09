@@ -364,7 +364,7 @@ test('cotações: preço garantido 5 min e só para os mesmos locais', async () 
   assert.equal(q.staticDurationSeconds, 600);
   assert.deepEqual(q.stops, []);
   assert.equal(q.surface, null);
-  assert.equal(qs.lookup(q.quoteId, A, B), q);
+  assert.equal(qs.lookup(q.quoteId, A, B), q.routes[0]);
   assert.equal(qs.lookup(q.quoteId, A, { lat: -25.9, lng: 32.4 }), null, 'destino diferente');
   assert.equal(qs.lookup('nao-existe', A, B), null);
   assert.equal(qs.lookup(undefined, A, B), null);
@@ -416,4 +416,27 @@ test('haversine', () => {
   assert.ok(Math.abs(d - 111195) < 200);
   const m = haversine({ lat: -25.9692, lng: 32.5732 }, { lat: -25.9622, lng: 32.4589 });
   assert.ok(m > 11000 && m < 12500, String(m));
+});
+
+test('rotas alternativas: cada uma com o seu preço e quoteId; repetidas não aparecem', async () => {
+  const A = { lat: -25.97, lng: 32.57 };
+  const B = { lat: -25.9, lng: 32.6 };
+  const route = async (o, d) => ({
+    distanceMeters: 9000,
+    durationSeconds: 1500,
+    polyline: [o, d],
+    alternatives: [
+      { distanceMeters: 7000, durationSeconds: 1300, polyline: [o, { lat: -25.95, lng: 32.6 }, d] },
+      { distanceMeters: 9050, durationSeconds: 1520, polyline: [o, d] }, // quase igual à principal
+    ],
+  });
+  const qs = createQuoteService({ route, clock: () => new Date(Date.UTC(2026, 10, 4, 10)) });
+  const q = await qs.quote(A, B);
+  assert.equal(q.routes.length, 2);
+  assert.equal(q.quoteId, q.routes[0].quoteId, 'a principal vem primeiro');
+  assert.notEqual(q.routes[0].quoteId, q.routes[1].quoteId);
+  assert.ok(q.routes[1].prices.economico < q.routes[0].prices.economico, 'a mais curta é mais barata');
+  const alt = qs.lookup(q.routes[1].quoteId, A, B);
+  assert.equal(alt.distanceMeters, 7000, 'pedir com o quoteId da alternativa garante essa rota e esse preço');
+  assert.equal(alt.routes, undefined);
 });
