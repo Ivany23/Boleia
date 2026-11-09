@@ -12,7 +12,8 @@
  *              (mesmo bairro ou bairros vizinhos): metade da base e mínimo mais baixo.
  * 3. GARANTIA: o motorista recebe sempre, no mínimo, o custo real + ganho mínimo
  *              por hora de trabalho (ida até à recolha + viagem), por categoria
- * 4. AJUSTE:   × multiplicador (horário × procura/falta de carros × chuva × aprendizagem),
+ * 4. AJUSTE:   multiplicador (horário × procura/falta de carros × chuva × aprendizagem) aplicado
+ *              SÓ ao ganho do motorista (não ao combustível/desgaste),
  *              0,9 a 1,6, aplicado POR CIMA da garantia (a noite rende sempre mais)
  * 6. CARRO PARADO: 3 min de espera grátis na recolha, depois por minuto; e, se a viagem
  *              demorar muito mais do que o previsto (parado no trânsito), o tempo extra.
@@ -159,22 +160,25 @@ export const SCARCITY_ONE = 1.05;
 export const MAX_DEMAND = 1.3;
 
 /**
- * Procura instantânea na zona (1 a 1,3):
+ * Procura instantânea na zona (1 a 1,3). waiting = pedidos à espera, INCLUINDO o que está a ser cotado:
  *  - pedidos à espera vs. motoristas livres perto (+10% por cada pedido a mais);
- *  - falta de carros: nenhum livre ×1,15; só um ×1,05;
+ *  - falta de carros (só com outros pedidos à espera): nenhum livre ×1,15; só um ×1,05;
  *  - pico de pedidos: pedidos dos últimos 15 min por carro livre; acima de 2 por
  *    carro, +3% por cada pedido a mais (no máximo +15%).
  */
 export function demandMultiplier(waiting, freeDrivers, recentRequests = 0) {
   const wait = waiting > 0 ? waiting : 0;
   const free = freeDrivers > 0 ? Math.floor(freeDrivers) : 0;
+  // `waiting` inclui o próprio pedido a ser cotado: só há falta de carros se OUTROS
+  // passageiros também estiverem à espera (sozinho, não se paga a mais por estar a pedir)
+  const others = wait > 1;
   let m = 1;
   if (free === 0) {
-    if (wait > 0) m = SCARCITY_NONE;
+    if (others) m = SCARCITY_NONE;
   } else {
     const ratio = wait / free;
     if (ratio > 1) m = 1 + (ratio - 1) * 0.1;
-    if (free === 1 && wait > 0) m = Math.max(m, SCARCITY_ONE);
+    if (free === 1 && others) m = Math.max(m, SCARCITY_ONE);
   }
   const perCar = (Number(recentRequests) || 0) / (free + 1);
   if (perCar > 2) m *= 1 + Math.min(0.15, (perCar - 2) * 0.03);
@@ -272,9 +276,14 @@ export function fareFor(
   const guaranteed = Math.max(tariff, floorNet);
   const guarantee = guaranteed - tariff;
 
-  // 4. ajuste por cima da garantia (noite / ponta / procura sobem sempre o preço);
-  //    um desconto da aprendizagem nunca desce abaixo da garantia do motorista
-  const net = Math.max(guaranteed * m, floorNet);
+  // 4. ajuste (noite / ponta / procura / chuva) só sobre o GANHO do motorista, não sobre o
+  //    combustível e o desgaste: a gasolina não fica mais cara na hora de ponta, e assim as
+  //    viagens longas não disparam (+20% em 22 km eram +90 MT só de "subida").
+  //    Na mota o ganho é pequeno: a subida conta sempre sobre pelo menos metade da tarifa,
+  //    para continuar visível depois do arredondamento a 5 MT.
+  //    Um desconto da aprendizagem nunca desce abaixo da garantia do motorista.
+  const margin = Math.max(guaranteed - driverCost, guaranteed * 0.5);
+  const net = Math.max(guaranteed + margin * (m - 1), floorNet);
 
   // 5. plataforma
   // com subida (ponta, noite, chuva…) arredonda para CIMA: a subida nunca desaparece no arredondamento

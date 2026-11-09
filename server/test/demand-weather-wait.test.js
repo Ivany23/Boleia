@@ -29,8 +29,11 @@ const B = { lat: -25.9622, lng: 32.4589 };
 // ---------------------------------------------------------------------------
 
 test('falta de carros: nenhum livre +15%, só um +5%, muitos = sem ajuste', () => {
-  assert.equal(demandMultiplier(1, 0), 1.15);
-  assert.equal(demandMultiplier(1, 1), 1.05);
+  // sozinho a pedir (waiting = 1 é o próprio pedido) não é falta de carros
+  assert.equal(demandMultiplier(1, 0), 1);
+  assert.equal(demandMultiplier(1, 1), 1);
+  assert.equal(demandMultiplier(2, 0), 1.15);
+  assert.equal(demandMultiplier(2, 1), 1.1);
   assert.equal(demandMultiplier(1, 2), 1);
   assert.equal(demandMultiplier(1, 8), 1);
   assert.equal(demandMultiplier(4, 1), 1.3, 'muitos pedidos para um carro');
@@ -41,7 +44,7 @@ test('picos de pedidos: muitos pedidos recentes por carro livre sobem até +15%'
   assert.equal(demandMultiplier(1, 5, 12), 1, '2 por carro: normal');
   assert.equal(demandMultiplier(1, 5, 18), 1.03);
   assert.equal(demandMultiplier(1, 5, 1000), 1.15, 'nunca mais de +15% pelo pico');
-  assert.equal(demandMultiplier(1, 0, 1000), 1.3, 'falta de carros + pico: tecto de 1,3');
+  assert.equal(demandMultiplier(2, 0, 1000), 1.3, 'falta de carros + pico: tecto de 1,3');
   for (const r of [0, 3, 10, 30, 100]) {
     for (const f of [0, 1, 2, 5]) {
       const m = demandMultiplier(2, f, r);
@@ -88,7 +91,9 @@ test('chuva: sobe o preço de todas as categorias (fraca < forte), dentro do tec
   const light = priceRoute(route, { date: WED_NOON, rain: RAIN_MULTIPLIER.fraca });
   const heavy = priceRoute(route, { date: WED_NOON, rain: RAIN_MULTIPLIER.forte });
   for (const c of CATEGORIES) {
-    assert.ok(light.prices[c] > dry.prices[c] && heavy.prices[c] > light.prices[c], c);
+    // na mota (tarifas de ~60 MT) o arredondamento a 5 MT pode juntar chuva fraca e forte
+    assert.ok(light.prices[c] > dry.prices[c] && heavy.prices[c] >= light.prices[c], c);
+    if (c !== 'moto') assert.ok(heavy.prices[c] > light.prices[c], c);
   }
   assert.equal(dry.rain, null);
   assert.deepEqual(heavy.rain, { multiplier: 1.2 });

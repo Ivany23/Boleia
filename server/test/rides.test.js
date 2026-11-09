@@ -91,9 +91,8 @@ test('fluxo completo: pedido → oferta → aceitar → chegou → iniciar → c
   const r = await ack(pax, 'ride:request', reqBody({ pickup: ZONE(0) }));
   assert.equal(r.ok, true);
   assert.equal(r.ride.status, 'searching');
-  // um só carro livre por perto (o deste teste, à porta): +5% por falta de carros
-  const expected = priceFor('economico', 5000, 600, { pickupMeters: 0, multiplier: 1.05 });
-  assert.equal(expected, 115); // 89,31 × 1,05 / 0,88 = 106,6 -> 110 (para cima) + 5
+  // um carro livre e um só pedido: não há falta de carros, sem ajuste
+  const expected = priceFor('economico', 5000, 600, { pickupMeters: 0 });
   assert.equal(r.ride.price, expected);
   assert.equal(r.ride.fare.total, expected);
   assert.equal(r.ride.fare.driverEarnings + r.ride.fare.platformFee, expected);

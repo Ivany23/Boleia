@@ -112,7 +112,8 @@ test('preço: noite e ponta sobem SEMPRE o preço (todas as categorias e distân
       const normal = priceFor(c, m, s);
       const ponta = priceFor(c, m, s, { multiplier: 1.15 });
       const noite = priceFor(c, m, s, { multiplier: 1.25 });
-      assert.ok(ponta > normal && noite > ponta, `${c} ${m}m: ${normal} / ${ponta} / ${noite}`);
+      assert.ok(ponta > normal && noite >= ponta, `${c} ${m}m: ${normal} / ${ponta} / ${noite}`);
+      if (c !== 'moto') assert.ok(noite > ponta, `${c} ${m}m: ${ponta} / ${noite}`);
     }
   }
 });
