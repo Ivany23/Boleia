@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    
+    <linearGradient id="body" x1="0" y1="228" x2="0" y2="412" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="0.38" stop-color="#EEF1F4"/>
+      <stop offset="0.46" stop-color="#FFFFFF"/>
+      <stop offset="0.62" stop-color="#D9DEE3"/>
+      <stop offset="1" stop-color="#8E98A2"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="236" x2="0" y2="306" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4E5B66"/>
+      <stop offset="1" stop-color="#1A2128"/>
+    </linearGradient>
+    <linearGradient id="glare" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="rim" cx="0.42" cy="0.38" r="0.7">
+      <stop offset="0" stop-color="#F2F4F6"/>
+      <stop offset="0.6" stop-color="#B9C0C7"/>
+      <stop offset="1" stop-color="#6E767E"/>
+    </radialGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C9D3DC"/>
+    </linearGradient>
+    <linearGradient id="tail" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7A0E14"/>
+      <stop offset="1" stop-color="#E0323C"/>
+    </linearGradient>
+    <g id="wheel">
+      <circle r="48" fill="#1C1F23"/>
+      <circle r="44" fill="none" stroke="#2C3137" stroke-width="3"/>
+      <circle r="31" fill="url(#rim)"/>
+      <circle r="26" fill="#3A4047"/>
+      <g fill="url(#rim)">
+        <path d="M-4,-8 L-5,-29 L5,-29 L4,-8 Z"/>
+        <path d="M-4,-8 L-5,-29 L5,-29 L4,-8 Z" transform="rotate(72)"/>
+        <path d="M-4,-8 L-5,-29 L5,-29 L4,-8 Z" transform="rotate(144)"/>
+        <path d="M-4,-8 L-5,-29 L5,-29 L4,-8 Z" transform="rotate(216)"/>
+        <path d="M-4,-8 L-5,-29 L5,-29 L4,-8 Z" transform="rotate(288)"/>
+      </g>
+      <circle r="9" fill="#C7CDD3" stroke="#7D858D" stroke-width="1.5"/>
+      <circle r="3" fill="#5C646C"/>
+    </g>
+  </defs>
+
+
+  <!-- wheel wells -->
+  <path d="M72,412 A58,58 0 0 1 188,412 Z" fill="#121417"/>
+  <path d="M324,412 A58,58 0 0 1 440,412 Z" fill="#121417"/>
+
+  <!-- body -->
+  <path d="M58,412 L50,412 Q38,410 38,396 L38,372 Q38,350 56,338 Q100,318 178,306 Q205,268 238,240 Q250,231 270,230 L372,228 Q398,228 414,240 Q446,268 460,296 Q470,318 472,348 L474,394 Q474,410 458,412 L440,412 A58,58 0 0 0 324,412 L188,412 A58,58 0 0 0 72,412 Z" fill="url(#body)" stroke="#7F8891" stroke-width="1.2"/>
+
+  <!-- greenhouse -->
+  <path d="M190,305 L446,298 Q432,268 410,248 Q396,238 372,238 L272,240 Q254,241 244,250 Q216,276 190,305 Z" fill="url(#glass)"/>
+  <rect x="297" y="238" width="10" height="66" fill="#16191C"/>
+  <path d="M392,238 L402,238 L410,300 L398,300 Z" fill="#16191C"/>
+  <path d="M206,300 L250,246 L282,246 L232,300 Z" fill="url(#glare)"/>
+  <path d="M318,300 L352,244 L372,244 L338,300 Z" fill="url(#glare)"/>
+
+  <!-- shoulder highlight and character line -->
+  <path d="M60,336 Q120,318 190,310 L450,302" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.9"/>
+  <path d="M70,364 Q200,350 470,346" fill="none" stroke="#9AA3AC" stroke-width="1.5" stroke-opacity="0.8"/>
+
+  <!-- door shut lines -->
+  <path d="M194,306 Q184,350 194,402" fill="none" stroke="#7C858E" stroke-width="1.4"/>
+  <path d="M302,304 L302,410" fill="none" stroke="#7C858E" stroke-width="1.4"/>
+  <path d="M400,302 Q404,330 394,362" fill="none" stroke="#7C858E" stroke-width="1.4"/>
+  <rect x="260" y="318" width="24" height="5" rx="2.5" fill="#8C959E"/>
+  <rect x="360" y="316" width="24" height="5" rx="2.5" fill="#8C959E"/>
+
+  <!-- mirror -->
+  <path d="M196,300 Q186,292 196,286 L214,288 Q218,296 212,304 Z" fill="#1B1F23"/>
+
+  <!-- front details -->
+  <path d="M42,352 Q52,336 84,331 L98,334 Q84,348 46,362 Z" fill="url(#head)" stroke="#6F7880" stroke-width="1"/>
+  <path d="M50,352 Q62,342 84,338" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M38,376 L62,374 Q66,386 60,396 L38,398 Z" fill="#23272C"/>
+  <path d="M40,400 Q44,410 58,412 L72,412 L72,404 Z" fill="#2A2F35"/>
+
+  <!-- rear details -->
+  <path d="M458,300 Q469,314 472,336 L462,338 Q459,318 452,304 Z" fill="url(#tail)"/>
+  <path d="M474,384 L474,396 Q474,410 458,412 L440,412 L442,388 Z" fill="#2A2F35"/>
+
+  <!-- side skirt -->
+  <path d="M188,404 L324,404 L324,412 L188,412 Z" fill="#2E343A"/>
+
+  <use href="#wheel" x="130" y="412"/>
+  <use href="#wheel" x="382" y="412"/>
+</svg>

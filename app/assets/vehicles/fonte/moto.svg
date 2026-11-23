@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tank" x1="0" y1="220" x2="0" y2="282" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5A626B"/>
+      <stop offset="0.25" stop-color="#2A2F35"/>
+      <stop offset="1" stop-color="#121417"/>
+    </linearGradient>
+    <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F4F6F8"/>
+      <stop offset="0.45" stop-color="#A7AFB7"/>
+      <stop offset="0.55" stop-color="#7C848C"/>
+      <stop offset="1" stop-color="#D5DADF"/>
+    </linearGradient>
+    <linearGradient id="engine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8A929A"/>
+      <stop offset="1" stop-color="#454C53"/>
+    </linearGradient>
+    <linearGradient id="fork" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8E979F"/>
+      <stop offset="0.5" stop-color="#EEF1F3"/>
+      <stop offset="1" stop-color="#7E878F"/>
+    </linearGradient>
+    <radialGradient id="lens" cx="0.35" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#B8C3CD"/>
+    </radialGradient>
+    <linearGradient id="tail" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7A0E14"/>
+      <stop offset="1" stop-color="#E0323C"/>
+    </linearGradient>
+    <g id="wheel">
+      <circle r="60" fill="#1A1D21"/>
+      <circle r="56" fill="none" stroke="#2A2F35" stroke-width="3"/>
+      <circle r="44" fill="none" stroke="url(#chrome)" stroke-width="4"/>
+      <circle r="41" fill="#24292E"/>
+      <g stroke="#5B636B" stroke-width="5" stroke-linecap="round">
+        <path d="M0,-9 L0,-40"/>
+        <path d="M0,-9 L0,-40" transform="rotate(72)"/>
+        <path d="M0,-9 L0,-40" transform="rotate(144)"/>
+        <path d="M0,-9 L0,-40" transform="rotate(216)"/>
+        <path d="M0,-9 L0,-40" transform="rotate(288)"/>
+      </g>
+      <circle r="11" fill="#8E979F" stroke="#4F575F" stroke-width="2"/>
+      <circle r="4" fill="#3A4148"/>
+    </g>
+  </defs>
+
+
+  <use href="#wheel" x="392" y="400"/>
+  <use href="#wheel" x="118" y="400"/>
+
+  <!-- front brake disc + caliper -->
+  <circle cx="118" cy="400" r="26" fill="none" stroke="#B9C0C7" stroke-width="7"/>
+  <path d="M134,376 L148,384 L144,398 L130,392 Z" fill="#1E2226"/>
+
+  <!-- swingarm & chain guard -->
+  <path d="M286,344 L298,336 L398,392 L390,408 Z" fill="#2A2F35"/>
+  <path d="M300,334 Q350,346 402,380 L398,388 Q350,360 296,346 Z" fill="#15181B"/>
+
+  <!-- rear shock -->
+  <path d="M378,292 L364,384" stroke="#1C1F23" stroke-width="12" stroke-linecap="round"/>
+  <path d="M376,306 L366,374" stroke="#C9CFD5" stroke-width="7" stroke-dasharray="4 3"/>
+
+  <!-- frame -->
+  <path d="M180,236 L230,332" stroke="#202428" stroke-width="12" stroke-linecap="round"/>
+  <path d="M180,236 L300,286" stroke="#202428" stroke-width="10" stroke-linecap="round"/>
+
+  <!-- engine -->
+  <path d="M216,306 L262,296 L306,304 L314,352 Q312,378 282,380 L238,378 Q216,372 214,346 Z" fill="url(#engine)" stroke="#3A4046" stroke-width="1.2"/>
+  <g stroke="#3D444B" stroke-width="2.2">
+    <path d="M220,314 L262,306"/><path d="M220,322 L264,314"/><path d="M220,330 L266,322"/><path d="M222,338 L268,330"/>
+  </g>
+  <circle cx="284" cy="350" r="21" fill="url(#chrome)" stroke="#6C747C" stroke-width="1.5"/>
+  <circle cx="284" cy="350" r="9" fill="#9CA4AC"/>
+
+  <!-- exhaust -->
+  <path d="M232,372 Q240,392 280,394 L330,392" fill="none" stroke="url(#chrome)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M322,380 L430,366 Q446,366 448,378 Q448,390 432,392 L324,402 Z" fill="url(#chrome)" stroke="#7E868E" stroke-width="1"/>
+  <path d="M440,368 Q450,370 450,380 Q450,390 440,391 Z" fill="#2A2F35"/>
+
+  <!-- footpeg -->
+  <rect x="290" y="372" width="26" height="6" rx="3" fill="#1C1F23"/>
+
+  <!-- rear fender & tail -->
+  <path d="M368,334 A70,70 0 0 1 458,376" fill="none" stroke="#15181B" stroke-width="8" stroke-linecap="round"/>
+  <path d="M352,252 L436,250 Q462,252 474,262 L470,270 Q450,280 420,282 L360,292 Z" fill="url(#tank)"/>
+  <path d="M462,258 Q474,262 474,268 L462,272 Z" fill="url(#tail)"/>
+  <rect x="452" y="276" width="10" height="5" rx="2" fill="#F2A60D"/>
+
+  <!-- side panel -->
+  <path d="M296,262 L372,262 L366,300 Q330,306 300,300 Z" fill="#1F2327"/>
+  <path d="M308,272 L356,272" stroke="#3E454C" stroke-width="2"/>
+
+  <!-- seat -->
+  <path d="M284,242 Q300,232 330,234 L432,238 Q448,240 446,250 L440,256 L296,262 Q280,258 284,242 Z" fill="#141618"/>
+  <path d="M300,248 L436,246" stroke="#2C3136" stroke-width="1.5" stroke-dasharray="3 3"/>
+
+  <!-- fuel tank -->
+  <path d="M184,240 Q196,222 236,218 Q280,216 300,232 Q308,246 302,268 Q270,276 214,280 Q190,276 184,240 Z" fill="url(#tank)" stroke="#0E1012" stroke-width="1.2"/>
+  <path d="M200,236 Q228,226 270,226" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-opacity="0.45" stroke-linecap="round"/>
+  <path d="M206,258 Q250,252 296,254" fill="none" stroke="#8A929A" stroke-width="2" stroke-opacity="0.6"/>
+
+  <!-- front fork -->
+  <path d="M176,236 L122,398" stroke="url(#fork)" stroke-width="11" stroke-linecap="round"/>
+  <path d="M146,326 L122,398" stroke="#2A2F35" stroke-width="13" stroke-linecap="round"/>
+
+  <!-- front mudguard -->
+  <path d="M56,374 A66,66 0 0 1 168,356" fill="none" stroke="#15181B" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- handlebar & mirror -->
+  <path d="M188,214 L176,196" stroke="#2A2F35" stroke-width="3"/>
+  <ellipse cx="172" cy="190" rx="10" ry="6" fill="#1C1F23" transform="rotate(-20 172 190)"/>
+  <path d="M182,222 Q196,210 214,212" fill="none" stroke="#3A4148" stroke-width="5" stroke-linecap="round"/>
+  <path d="M206,212 L222,214" stroke="#111315" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- headlight cowl -->
+  <path d="M190,214 Q160,212 146,228 Q138,244 150,258 Q170,262 186,254 Z" fill="#1A1D21"/>
+  <ellipse cx="148" cy="240" rx="9" ry="16" fill="url(#lens)" stroke="#555D65" stroke-width="1.2"/>
+  <rect x="160" y="258" width="10" height="5" rx="2" fill="#F2A60D"/>
+</svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="body" x1="0" y1="192" x2="0" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6B747E"/>
+      <stop offset="0.36" stop-color="#4A525B"/>
+      <stop offset="0.43" stop-color="#7C8690"/>
+      <stop offset="0.5" stop-color="#4C545D"/>
+      <stop offset="1" stop-color="#262B30"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="204" x2="0" y2="276" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3E4953"/>
+      <stop offset="1" stop-color="#11161B"/>
+    </linearGradient>
+    <linearGradient id="glare" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="rim" cx="0.42" cy="0.38" r="0.7">
+      <stop offset="0" stop-color="#E9ECEF"/>
+      <stop offset="0.6" stop-color="#A9B1B9"/>
+      <stop offset="1" stop-color="#5F676F"/>
+    </radialGradient>
+    <radialGradient id="shadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#000" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="head" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C3CDD6"/>
+    </linearGradient>
+    <linearGradient id="tail" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6E0B11"/>
+      <stop offset="1" stop-color="#DA2F39"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E4E8EC"/>
+      <stop offset="1" stop-color="#8E979F"/>
+    </linearGradient>
+    <g id="wheel">
+      <circle r="54" fill="#1A1D21"/>
+      <circle r="50" fill="none" stroke="#2B3036" stroke-width="3"/>
+      <circle r="35" fill="url(#rim)"/>
+      <circle r="30" fill="#30363C"/>
+      <g fill="url(#rim)">
+        <path d="M-3,-9 L-7,-33 L7,-33 L3,-9 Z"/>
+        <path d="M-3,-9 L-7,-33 L7,-33 L3,-9 Z" transform="rotate(60)"/>
+        <path d="M-3,-9 L-7,-33 L7,-33 L3,-9 Z" transform="rotate(120)"/>
+        <path d="M-3,-9 L-7,-33 L7,-33 L3,-9 Z" transform="rotate(180)"/>
+        <path d="M-3,-9 L-7,-33 L7,-33 L3,-9 Z" transform="rotate(240)"/>
+        <path d="M-3,-9 L-7,-33 L7,-33 L3,-9 Z" transform="rotate(300)"/>
+      </g>
+      <circle r="10" fill="#C3C9CF" stroke="#7A828A" stroke-width="1.5"/>
+      <circle r="3.5" fill="#545C64"/>
+    </g>
+  </defs>
+
+
+  <!-- wheel wells -->
+  <path d="M68,400 A60,60 0 0 1 188,400 Z" fill="#0F1113"/>
+  <path d="M330,400 A60,60 0 0 1 450,400 Z" fill="#0F1113"/>
+
+  <!-- roof rails -->
+  <path d="M276,194 L276,186 Q276,182 282,182 L412,180 Q418,180 418,186 L418,192" fill="none" stroke="url(#rail)" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- body -->
+  <path d="M60,398 Q40,398 38,380 L36,334 Q36,306 60,298 Q120,284 182,278 Q212,234 242,206 Q252,197 270,196 L418,193 Q440,193 448,206 Q462,234 470,264 L476,376 Q476,398 458,398 L450,398 A60,60 0 0 0 330,398 L188,398 A60,60 0 0 0 68,398 Z" fill="url(#body)" stroke="#22272C" stroke-width="1.2"/>
+
+  <!-- greenhouse -->
+  <path d="M194,278 L462,272 Q452,238 440,216 Q434,205 418,205 L272,207 Q256,208 248,216 Q222,246 194,278 Z" fill="url(#glass)"/>
+  <rect x="318" y="206" width="11" height="70" fill="#0E1114"/>
+  <path d="M404,205 L415,205 L420,274 L408,274 Z" fill="#0E1114"/>
+  <path d="M212,272 L254,214 L286,214 L240,272 Z" fill="url(#glare)"/>
+  <path d="M340,272 L370,212 L390,212 L360,272 Z" fill="url(#glare)"/>
+
+  <!-- shoulder highlight & lines -->
+  <path d="M62,298 Q122,286 196,282 L464,276" fill="none" stroke="#A6B0BA" stroke-width="2.5" stroke-opacity="0.9"/>
+  <path d="M66,334 Q200,322 472,318" fill="none" stroke="#8C96A0" stroke-width="1.5" stroke-opacity="0.7"/>
+
+  <!-- door shut lines & handles -->
+  <path d="M196,280 Q186,330 196,372" fill="none" stroke="#1E2227" stroke-width="1.6"/>
+  <path d="M324,278 L324,372" fill="none" stroke="#1E2227" stroke-width="1.6"/>
+  <path d="M412,276 Q416,312 404,348" fill="none" stroke="#1E2227" stroke-width="1.6"/>
+  <rect x="280" y="292" width="26" height="5" rx="2.5" fill="#9AA4AE"/>
+  <rect x="380" y="290" width="26" height="5" rx="2.5" fill="#9AA4AE"/>
+
+  <!-- mirror -->
+  <path d="M198,272 Q186,262 198,256 L218,258 Q222,268 216,276 Z" fill="#15181C"/>
+
+  <!-- lower cladding (SUV) -->
+  <path d="M188,372 L330,372 L330,398 L188,398 Z" fill="#1B1F23"/>
+  <path d="M68,398 A60,60 0 0 1 188,398" fill="none" stroke="#1B1F23" stroke-width="9"/>
+  <path d="M330,398 A60,60 0 0 1 450,398" fill="none" stroke="#1B1F23" stroke-width="9"/>
+  <path d="M36,360 L36,380 Q38,398 60,398 L64,398 L66,360 Z" fill="#1B1F23"/>
+  <path d="M476,356 L476,376 Q476,398 458,398 L452,398 L450,356 Z" fill="#1B1F23"/>
+  <path d="M40,372 L62,372" stroke="#9AA4AE" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- front: headlight & grille -->
+  <path d="M38,318 Q46,302 84,296 L102,298 Q86,314 40,328 Z" fill="url(#head)" stroke="#2A3036" stroke-width="1"/>
+  <path d="M46,318 Q60,306 88,302" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+  <path d="M36,334 L56,332 L58,352 L36,354 Z" fill="#14171A"/>
+  <path d="M38,340 L56,339 M38,346 L56,345" stroke="#3A4148" stroke-width="1.5"/>
+
+  <!-- rear: taillight -->
+  <path d="M464,262 Q472,284 474,312 L464,312 Q462,286 456,266 Z" fill="url(#tail)"/>
+
+  <use href="#wheel" x="128" y="404"/>
+  <use href="#wheel" x="390" y="404"/>
+</svg>
